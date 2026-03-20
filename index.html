@@ -21,51 +21,49 @@
             height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* --- SYSTEM INTRO --- */
         #intro-screen {
             position: fixed; inset: 0; background: black; z-index: 999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 1s;
         }
+
         .pulse { animation: pulse-anim 2s infinite; color: var(--neon-blue); letter-spacing: 4px; font-weight: bold; }
         @keyframes pulse-anim { 0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); } 50% { opacity: 0.3; } }
 
-        /* --- TABS --- */
         .tab-content { display: none; flex-grow: 1; overflow-y: auto; padding-bottom: 90px; }
         .tab-content.active { display: flex; flex-direction: column; }
 
         #map { flex-grow: 1; width: 100%; border-bottom: 1px solid var(--neon-purple); }
 
-        /* --- UI CARDS --- */
         .card {
             background: var(--panel-bg); margin: 10px 15px; padding: 15px;
             border: 1px solid #333; border-left: 4px solid var(--gold); border-radius: 4px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .delete-btn { color: var(--crimson); background: none; border: none; font-size: 1.5rem; padding: 0 10px; }
 
-        /* --- VAULT GRID --- */
+        .delete-btn { color: var(--crimson); background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
         .items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
         .item-slot { 
             background: #111; border: 1px solid #222; padding: 15px; border-radius: 8px; 
-            text-align: center; opacity: 0.3; grayscale: 1; transition: 0.5s;
+            text-align: center; opacity: 0.3; filter: grayscale(1); transition: 0.5s;
         }
-        .item-slot.unlocked { opacity: 1; grayscale: 0; border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
+        .item-slot.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
 
-        /* --- NAV BAR --- */
         nav {
             position: fixed; bottom: 0; width: 100%; height: 75px;
             background: rgba(5, 5, 5, 0.98); border-top: 1px solid var(--neon-purple);
             display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
-        .nav-item { color: #555; font-size: 0.7rem; text-align: center; text-transform: uppercase; font-weight: bold; }
+
+        .nav-item { color: #555; font-size: 0.7rem; text-align: center; text-transform: uppercase; font-weight: bold; cursor: pointer; }
         .nav-item.active { color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue); }
 
         .btn-action {
             width: 80%; padding: 15px; border: none; border-radius: 5px; margin: 15px auto;
             font-weight: bold; font-size: 1rem; letter-spacing: 2px;
             background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
-            box-shadow: 0 0 15px var(--neon-blue); color: black;
+            box-shadow: 0 0 15px var(--neon-blue); color: black; cursor: pointer;
         }
     </style>
 </head>
@@ -144,7 +142,9 @@
 
         document.getElementById('action-btn').onclick = function() {
             if(!isTracking) {
-                isTracking = true; this.innerText = "END QUEST"; this.style.background = "var(--crimson)";
+                isTracking = true; 
+                this.innerText = "END QUEST"; 
+                this.style.background = "var(--crimson)";
                 this.style.boxShadow = "0 0 15px var(--crimson)";
                 huntDist = 0; currentPath = [];
                 watchId = navigator.geolocation.watchPosition(p => {
@@ -158,16 +158,19 @@
         };
 
         function stopQuest() {
-            isTracking = false; navigator.geolocation.clearWatch(watchId);
+            isTracking = false; 
+            navigator.geolocation.clearWatch(watchId);
             const btn = document.getElementById('action-btn');
-            btn.innerText = "SET SAIL"; btn.style.background = "linear-gradient(90deg, var(--neon-blue), var(--neon-purple))";
+            btn.innerText = "SET SAIL"; 
+            btn.style.background = "linear-gradient(90deg, var(--neon-blue), var(--neon-purple))";
             btn.style.boxShadow = "0 0 15px var(--neon-blue)";
             
             if(huntDist > 5) {
-                if (window.navigator.vibrate) window.navigator.vibrate(200); // iPhone haptic
+                if (window.navigator.vibrate) window.navigator.vibrate(200);
                 const log = { id: Date.now(), date: new Date().toLocaleDateString(), dist: Math.round(huntDist) };
                 let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
-                logs.unshift(log); localStorage.setItem('system_logs_v4', JSON.stringify(logs));
+                logs.unshift(log); 
+                localStorage.setItem('system_logs_v4', JSON.stringify(logs));
                 checkUnlocks(logs.reduce((s, l) => s + l.dist, 0));
                 alert(`[QUEST CLEARED] Reward: ฿${log.dist}`);
             }
