@@ -108,10 +108,11 @@
             <p id="currency-name" style="font-size: 0.6rem; color: #888; margin-bottom: 10px;">BOUNTY</p>
             <h3 id="status-rank-name" style="color: var(--neon-blue); font-size: 0.9rem; border-top: 1px solid #222; padding-top: 10px;">CABIN BOY</h3>
         </div>
-        <div style="margin-top: 20px;">
-            <button class="btn-action" style="max-width: 140px; font-size: 0.7rem;" onclick="openShop()">🛒 SYSTEM SHOP</button>
-            <br>
-            <button onclick="resetIdentity()" style="background:none; border:none; color:#444; font-size:0.6rem; margin-top:15px;">RESET PATH</button>
+        
+        <div style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <button class="btn-action" style="max-width: 180px;" onclick="openShop()">🛒 SYSTEM SHOP</button>
+            <button class="btn-action" style="max-width: 180px; border-color: #555; color: #888;" onclick="changePath()">🔄 CHANGE PATH (KEEP PROGRESS)</button>
+            <button onclick="fullReset()" style="background:none; border:none; color:#ff4b2b; font-size:0.7rem; cursor:pointer; text-decoration: underline;">⚠️ DATA WIPE (FULL RESET)</button>
         </div>
     </div>
 
@@ -250,7 +251,7 @@
             const nxt = d.ranks[nxtIdx] || {min: total * 2};
 
             document.getElementById('rank-label').innerText = `${pk}: ${rank.name}`;
-            document.getElementById('xp-stats').innerText = `${Math.floor(total).toLocaleString()} / ${nxt.min.toLocaleString()}`;
+            document.getElementById('xp-stats').innerText = `${Math.floor(total).toLocaleString()} / ${Math.floor(nxt.min).toLocaleString()}`;
             document.getElementById('xp-bar-fill').style.width = `${((total - rank.min) / (nxt.min - rank.min)) * 100}%`;
             document.getElementById('status-beli').innerText = (d.unit === '₱' ? '₱' : '') + Math.floor(total).toLocaleString() + (d.unit !== '₱' ? ' '+d.unit : '');
             document.getElementById('status-rank-name').innerText = rank.name;
@@ -265,7 +266,20 @@
             document.getElementById('equipped-back').innerText = eq.back || "";
         }
 
-        function resetIdentity() { if(confirm("Abandon path? (Gear stays)")) { localStorage.removeItem('user_path'); location.reload(); } }
+        // --- DATA MANAGEMENT FUNCTIONS ---
+        function changePath() {
+            if(confirm("Change your identity? Your points, logs, and shop items will be kept, but your Rank will adjust to the new Path.")) {
+                localStorage.removeItem('user_path');
+                location.reload(); 
+            }
+        }
+
+        function fullReset() {
+            if(confirm("DANGER: This will permanently delete ALL progress, items, and logs. This cannot be undone. Proceed?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
 
         window.onload = function() {
             const path = localStorage.getItem('user_path');
