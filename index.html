@@ -16,21 +16,22 @@
 
         body { margin: 0; padding: 0; background-color: var(--bg-black); color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
 
-        /* --- IDENTITY SELECTION --- */
-        #identity-overlay {
+        /* --- OVERLAYS --- */
+        #identity-overlay, #tab-shop {
             position: fixed; inset: 0; background: black; z-index: 2000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; text-align: center; transition: opacity 1s;
+            padding: 30px; text-align: center; transition: opacity 0.5s;
         }
+        #tab-shop { display: none; z-index: 1500; padding-top: 80px; overflow-y: auto; justify-content: flex-start; }
 
-        /* --- XP PROGRESS BAR --- */
+        /* --- TOP UI --- */
         #xp-container {
-            position: fixed; top: 0; width: 100%; height: 60px; background: rgba(0,0,0,0.9);
+            position: fixed; top: 0; width: 100%; height: 65px; background: rgba(0,0,0,0.95);
             z-index: 1100; border-bottom: 1px solid var(--neon-blue); display: flex; flex-direction: column; justify-content: center; padding: 0 15px; box-sizing: border-box;
         }
         .xp-text { font-size: 0.65rem; color: var(--neon-blue); font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; text-transform: uppercase; }
         .xp-bar-bg { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
-        #xp-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); transition: width 0.5s; box-shadow: 0 0 10px var(--neon-blue); }
+        #xp-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); transition: width 0.5s; }
 
         /* --- SIDEBAR --- */
         #sidebar {
@@ -42,27 +43,31 @@
         .side-item { padding: 18px; border-bottom: 1px solid #222; cursor: pointer; color: #888; font-size: 0.85rem; }
         .side-item.active { color: var(--neon-blue); background: rgba(0, 229, 255, 0.05); }
 
-        .menu-btn { position: fixed; top: 75px; left: 15px; z-index: 1001; background: rgba(0,0,0,0.6); border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+        .menu-btn { position: fixed; top: 80px; left: 15px; z-index: 1001; background: rgba(0,0,0,0.6); border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 8px 12px; border-radius: 5px; cursor: pointer; }
 
         #map { height: 100vh; width: 100%; z-index: 1; }
         .tab-content { display: none; position: fixed; inset: 0; background: var(--bg-black); z-index: 500; padding-top: 100px; overflow-y: auto; }
         .tab-content.active { display: block; }
 
         .btn-action {
-            width: 100%; max-width: 250px; padding: 15px; border: 1px solid var(--neon-blue); 
-            background: rgba(0,0,0,0.5); color: var(--neon-blue); margin: 10px 0; font-weight: bold; cursor: pointer;
+            width: 100%; max-width: 250px; padding: 12px; border: 1px solid var(--neon-blue); 
+            background: rgba(0,0,0,0.5); color: var(--neon-blue); margin: 8px 0; font-weight: bold; cursor: pointer; border-radius: 4px;
         }
         
-        #voyage-btn { position: fixed; bottom: 30px; left: 10%; width: 80%; padding: 15px; z-index: 600; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); color: black; border: none; font-weight: bold; border-radius: 5px; }
+        #voyage-btn { position: fixed; bottom: 30px; left: 10%; width: 80%; padding: 15px; z-index: 600; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); color: black; border: none; font-weight: bold; border-radius: 5px; text-transform: uppercase; }
         
         #multiplier-badge { background: var(--gold); color: black; font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; margin-left: 5px; display: none; }
+
+        /* --- SHOP CARDS --- */
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        .shop-card { background: #111; border: 1px solid #222; padding: 15px; border-radius: 8px; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="identity-overlay">
         <h2 style="color:var(--gold); letter-spacing:3px;">IDENTITY SCAN</h2>
-        <p style="color:#555; font-style: italic; margin-bottom: 20px;">[ Select your path in the Grand Line ]</p>
+        <p style="color:#555; font-style: italic; margin-bottom: 20px;">[ Select your path ]</p>
         <button class="btn-action" onclick="choosePath('Pirate')">PIRATE</button>
         <button class="btn-action" onclick="choosePath('Marine')">MARINE</button>
         <button class="btn-action" onclick="choosePath('Hunter')">HUNTER</button>
@@ -81,29 +86,39 @@
 
     <div id="sidebar">
         <div class="side-item active" onclick="switchTab('quest', this)">🗺️ VOYAGE</div>
-        <div class="side-item" onclick="switchTab('records', this)">📜 SYSTEM LOGS</div>
-        <div class="side-item" onclick="switchTab('vault', this)">💰 TREASURE VAULT</div>
-        <div class="side-item" onclick="switchTab('status', this)">👤 PLAYER STATUS</div>
+        <div class="side-item" onclick="switchTab('records', this)">📜 LOGS</div>
+        <div class="side-item" onclick="switchTab('status', this)">👤 PROFILE</div>
     </div>
 
     <div id="tab-quest"><div id="map"></div><button id="voyage-btn" onclick="toggleVoyage()">SET SAIL</button></div>
     
     <div id="tab-records" class="tab-content"><div id="logs-container" style="padding:15px;"></div></div>
-    
-    <div id="tab-vault" class="tab-content">
-        <div id="items-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:15px;"></div>
-    </div>
 
     <div id="tab-status" class="tab-content" style="text-align:center;">
-        <div style="border: 2px solid var(--gold); display: inline-block; padding: 25px; margin-top: 50px; background: #0a0a0a; min-width: 200px;">
+        <div style="border: 2px solid var(--gold); display: inline-block; padding: 25px; background: #0a0a0a; min-width: 220px; position: relative;">
             <p id="label-type" style="color:var(--gold); margin:0; font-weight:bold; letter-spacing:2px;">WANTED</p>
-            <div id="visual-aura" style="width: 100px; height: 100px; margin: 15px auto; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; transition: 0.5s;">👤</div>
+            
+            <div id="sprite-container" style="width: 120px; height: 120px; margin: 15px auto; position: relative; border: 1px solid #222; background: #111; display: flex; align-items: center; justify-content: center;">
+                <div id="char-base" style="font-size: 4rem; z-index: 2;">👤</div>
+                <div id="equipped-hat" style="position: absolute; top: 5px; font-size: 2.5rem; z-index: 5;"></div>
+                <div id="equipped-back" style="position: absolute; font-size: 3.5rem; z-index: 1; opacity: 0.6;"></div>
+            </div>
+
             <h2 id="status-beli" style="font-size:2rem; margin:10px 0;">0</h2>
             <p id="currency-name" style="font-size: 0.6rem; color: #888; margin-bottom: 10px;">BOUNTY</p>
-            <hr style="border:0; border-top: 1px solid #222;">
-            <h3 id="status-rank-name" style="color: var(--neon-blue); margin: 5px 0; font-size: 0.9rem;">CABIN BOY</h3>
+            <h3 id="status-rank-name" style="color: var(--neon-blue); font-size: 0.9rem; border-top: 1px solid #222; padding-top: 10px;">CABIN BOY</h3>
         </div>
-        <div style="margin-top: 20px;"><button onclick="resetIdentity()" style="background:none; border:1px solid #333; color:#444; font-size:0.6rem; padding:5px 10px;">RESET PATH</button></div>
+        <div style="margin-top: 20px;">
+            <button class="btn-action" style="max-width: 140px; font-size: 0.7rem;" onclick="openShop()">🛒 SYSTEM SHOP</button>
+            <br>
+            <button onclick="resetIdentity()" style="background:none; border:none; color:#444; font-size:0.6rem; margin-top:15px;">RESET PATH</button>
+        </div>
+    </div>
+
+    <div id="tab-shop">
+        <h2 style="color: var(--gold); letter-spacing: 2px;">[ SYSTEM SHOP ]</h2>
+        <div id="shop-items" class="shop-grid"></div>
+        <button class="btn-action" onclick="closeShop()">EXIT SHOP</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -111,34 +126,41 @@
         let map, userMarker, pathLine, watchId, isTracking = false, currentPath = [], huntDist = 0;
 
         const PATH_DATA = {
-            Pirate: { currency: "Bounty", unit: "₱", label: "WANTED", visual: "🏴‍☠️", color: "#00E5FF", ranks: [{name: "Cabin Boy", min: 0}, {name: "Crew Member", min: 50000}, {name: "First Mate", min: 200000}, {name: "Captain", min: 500000}, {name: "Warlord", min: 1000000}, {name: "Yonko", min: 2500000}, {name: "Pirate King", min: 5000000}] },
-            Marine: { currency: "Justice Points", unit: "JP", label: "ADJUDICATOR", visual: "⚓", color: "#007BFF", ranks: [{name: "Recruit", min: 0}, {name: "Seaman", min: 51}, {name: "Lieutenant", min: 201}, {name: "Commodore", min: 501}, {name: "Vice Admiral", min: 1001}, {name: "Admiral", min: 2501}, {name: "Fleet Admiral", min: 5001}] },
-            Hunter: { currency: "Hunter XP", unit: "XP", label: "LICENSE HOLDER", visual: "🗡️", color: "#00FF41", ranks: [{name: "E-Rank Hunter", min: 0}, {name: "D-Rank Hunter", min: 51}, {name: "C-Rank Hunter", min: 201}, {name: "B-Rank Hunter", min: 501}, {name: "A-Rank Hunter", min: 1001}, {name: "S-Rank Hunter", min: 2501}, {name: "National Hunter", min: 5001}] },
-            Villain: { currency: "Infamy", unit: "INF", label: "THREAT LEVEL", visual: "🕶️", color: "#FF0055", ranks: [{name: "Rogue", min: 0}, {name: "Outlaw", min: 51}, {name: "Mastermind", min: 201}, {name: "Overlord", min: 501}, {name: "Tyrant", min: 1001}, {name: "Dark Emperor", min: 2501}, {name: "World-Ender", min: 5001}] }
+            Pirate: { currency: "Bounty", unit: "₱", label: "WANTED", base: "🏴‍☠️", color: "#00E5FF", ranks: [{name: "Cabin Boy", min: 0}, {name: "Crew Member", min: 50000}, {name: "First Mate", min: 200000}, {name: "Captain", min: 500000}, {name: "Warlord", min: 1000000}, {name: "Yonko", min: 2500000}, {name: "Pirate King", min: 5000000}] },
+            Marine: { currency: "Justice", unit: "JP", label: "ADJUDICATOR", base: "👮", color: "#007BFF", ranks: [{name: "Recruit", min: 0}, {name: "Seaman", min: 51}, {name: "Lieutenant", min: 201}, {name: "Commodore", min: 501}, {name: "Vice Admiral", min: 1001}, {name: "Admiral", min: 2501}, {name: "Fleet Admiral", min: 5001}] },
+            Hunter: { currency: "Hunter XP", unit: "XP", label: "LICENSE", base: "🏹", color: "#00FF41", ranks: [{name: "E-Rank", min: 0}, {name: "D-Rank", min: 51}, {name: "C-Rank", min: 201}, {name: "B-Rank", min: 501}, {name: "A-Rank", min: 1001}, {name: "S-Rank", min: 2501}, {name: "National", min: 5001}] },
+            Villain: { currency: "Infamy", unit: "INF", label: "THREAT", base: "🦹", color: "#FF0055", ranks: [{name: "Rogue", min: 0}, {name: "Outlaw", min: 51}, {name: "Mastermind", min: 201}, {name: "Overlord", min: 501}, {name: "Tyrant", min: 1001}, {name: "Dark Emperor", min: 2501}, {name: "World-Ender", min: 5001}] }
         };
 
+        const SHOP_ITEMS = [
+            { id: 'cape', name: "Shadow Cape", cost: 500, icon: "🧣", type: "back" },
+            { id: 'straw', name: "Straw Hat", cost: 1500, icon: "👒", type: "hat" },
+            { id: 'aura', name: "God Aura", cost: 5000, icon: "🔥", type: "back" },
+            { id: 'crown', name: "King Crown", cost: 10000, icon: "👑", type: "hat" }
+        ];
+
         function checkMultiplier() {
-            const hour = new Date().getHours();
-            // 1.5x Buff between 5:00 PM (17) and 8:00 PM (20)
-            const isActive = (hour >= 17 && hour <= 20);
-            document.getElementById('multiplier-badge').style.display = isActive ? 'inline' : 'none';
-            return isActive ? 1.5 : 1.0;
+            const h = new Date().getHours();
+            const active = (h >= 17 && h <= 20); // 5pm to 8pm
+            document.getElementById('multiplier-badge').style.display = active ? 'inline' : 'none';
+            return active ? 1.5 : 1.0;
         }
 
-        function choosePath(path) {
-            localStorage.setItem('user_path', path);
+        function choosePath(p) {
+            localStorage.setItem('user_path', p);
             document.getElementById('identity-overlay').style.opacity = '0';
-            setTimeout(() => { document.getElementById('identity-overlay').style.display = 'none'; applyTheme(path); initMap(); }, 1000);
+            setTimeout(() => { document.getElementById('identity-overlay').style.display = 'none'; applyTheme(p); initMap(); }, 500);
         }
 
-        function applyTheme(path) {
-            const data = PATH_DATA[path];
-            document.documentElement.style.setProperty('--neon-blue', data.color);
+        function applyTheme(p) {
+            const d = PATH_DATA[p];
+            document.documentElement.style.setProperty('--neon-blue', d.color);
             updateGlobalUI();
+            updateSprite();
         }
 
         function initMap() {
-            if (map) return;
+            if(map) return;
             map = L.map('map', { zoomControl: false }).setView([14.5486, 121.0478], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
             userMarker = L.circleMarker([14.5486, 121.0478], { color: 'var(--neon-blue)', radius: 6, fillOpacity: 1 }).addTo(map);
@@ -147,13 +169,49 @@
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 
-        function switchTab(tabId, el) {
+        function switchTab(tId, el) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.side-item').forEach(n => n.classList.remove('active'));
-            if(tabId !== 'quest') document.getElementById('tab-' + tabId).classList.add('active');
+            if(tId !== 'quest') document.getElementById('tab-' + tId).classList.add('active');
             el.classList.add('active');
             toggleSidebar();
             updateGlobalUI();
+        }
+
+        function openShop() {
+            const purchased = JSON.parse(localStorage.getItem('sys_purchased') || "[]");
+            document.getElementById('tab-shop').style.display = 'block';
+            document.getElementById('shop-items').innerHTML = SHOP_ITEMS.map(i => {
+                const owned = purchased.includes(i.id);
+                return `<div class="shop-card">
+                    <div style="font-size:2rem">${i.icon}</div>
+                    <div style="font-size:0.7rem">${i.name}</div>
+                    <button onclick="${owned ? `equipItem('${i.id}')` : `buyItem('${i.id}', ${i.cost})`}" style="width:100%; margin-top:10px; font-size:0.6rem; border:1px solid var(--neon-blue); background:none; color:var(--neon-blue); padding:5px;">
+                        ${owned ? 'EQUIP' : 'BUY ฿'+i.cost}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        function closeShop() { document.getElementById('tab-shop').style.display = 'none'; updateSprite(); }
+
+        function buyItem(id, cost) {
+            const total = JSON.parse(localStorage.getItem('system_logs_v4') || "[]").reduce((s,l)=>s+l.dist,0);
+            if(total < cost) return alert("NOT ENOUGH FUNDS");
+            let p = JSON.parse(localStorage.getItem('sys_purchased') || "[]");
+            p.push(id); localStorage.setItem('sys_purchased', JSON.stringify(p));
+            let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
+            logs.unshift({id: Date.now(), date: "Shop", dist: -cost});
+            localStorage.setItem('system_logs_v4', JSON.stringify(logs));
+            openShop();
+        }
+
+        function equipItem(id) {
+            let eq = JSON.parse(localStorage.getItem('sys_equipped') || "{}");
+            const itm = SHOP_ITEMS.find(i => i.id === id);
+            eq[itm.type] = itm.icon;
+            localStorage.setItem('sys_equipped', JSON.stringify(eq));
+            alert("EQUIPPED!");
         }
 
         function toggleVoyage() {
@@ -172,46 +230,46 @@
 
         function stopQuest() {
             isTracking = false; navigator.geolocation.clearWatch(watchId);
-            const btn = document.getElementById('voyage-btn');
-            btn.innerText = "SET SAIL"; btn.style.background = "linear-gradient(90deg, var(--neon-blue), var(--neon-purple))";
-            if(huntDist > 5) {
-                const finalEarning = Math.round(huntDist * checkMultiplier());
+            const earned = Math.round(huntDist * checkMultiplier());
+            if(earned > 5) {
                 let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
-                logs.unshift({ id: Date.now(), date: new Date().toLocaleDateString(), dist: finalEarning });
+                logs.unshift({id: Date.now(), date: new Date().toLocaleDateString(), dist: earned});
                 localStorage.setItem('system_logs_v4', JSON.stringify(logs));
-                updateGlobalUI();
-                alert(`MISSION COMPLETE! Gained: ${finalEarning}`);
             }
+            document.getElementById('voyage-btn').innerText = "SET SAIL";
+            document.getElementById('voyage-btn').style.background = "linear-gradient(90deg, var(--neon-blue), var(--neon-purple))";
+            updateGlobalUI();
         }
 
-        function updateGlobalUI(currentSession = 0) {
-            const pathKey = localStorage.getItem('user_path') || 'Pirate';
-            const data = PATH_DATA[pathKey];
-            const logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
-            const total = logs.reduce((s, l) => s + l.dist, 0) + currentSession;
+        function updateGlobalUI(session = 0) {
+            const pk = localStorage.getItem('user_path') || 'Pirate';
+            const d = PATH_DATA[pk];
+            const total = JSON.parse(localStorage.getItem('system_logs_v4') || "[]").reduce((s,l)=>s+l.dist,0) + session;
+            const rank = [...d.ranks].reverse().find(r => total >= r.min) || d.ranks[0];
+            const nxtIdx = d.ranks.indexOf(rank) + 1;
+            const nxt = d.ranks[nxtIdx] || {min: total * 2};
 
-            const currentRank = [...data.ranks].reverse().find(r => total >= r.min) || data.ranks[0];
-            const nextIdx = data.ranks.findIndex(r => r.name === currentRank.name) + 1;
-            const nextRank = data.ranks[nextIdx] || { min: total * 1.5 };
-
-            document.getElementById('rank-label').innerText = `${pathKey}: ${currentRank.name}`;
-            document.getElementById('xp-stats').innerText = `${Math.floor(total).toLocaleString()} / ${Math.floor(nextRank.min).toLocaleString()}`;
-            document.getElementById('xp-bar-fill').style.width = `${((total - currentRank.min) / (nextRank.min - currentRank.min)) * 100}%`;
-
-            document.getElementById('label-type').innerText = data.label;
-            document.getElementById('status-beli').innerText = (data.unit === '₱' ? '₱' : '') + Math.floor(total).toLocaleString() + (data.unit !== '₱' ? ' ' + data.unit : '');
-            document.getElementById('currency-name').innerText = data.currency;
-            document.getElementById('status-rank-name').innerText = currentRank.name;
-            document.getElementById('visual-aura').innerText = data.visual;
-            
-            if(total > 2500) document.getElementById('visual-aura').style.textShadow = `0 0 15px var(--neon-blue)`;
+            document.getElementById('rank-label').innerText = `${pk}: ${rank.name}`;
+            document.getElementById('xp-stats').innerText = `${Math.floor(total).toLocaleString()} / ${nxt.min.toLocaleString()}`;
+            document.getElementById('xp-bar-fill').style.width = `${((total - rank.min) / (nxt.min - rank.min)) * 100}%`;
+            document.getElementById('status-beli').innerText = (d.unit === '₱' ? '₱' : '') + Math.floor(total).toLocaleString() + (d.unit !== '₱' ? ' '+d.unit : '');
+            document.getElementById('status-rank-name').innerText = rank.name;
+            document.getElementById('label-type').innerText = d.label;
         }
 
-        function resetIdentity() { if(confirm("Abandon path? Progress remains but identity shifts.")) { localStorage.removeItem('user_path'); location.reload(); } }
+        function updateSprite() {
+            const pk = localStorage.getItem('user_path') || 'Pirate';
+            const eq = JSON.parse(localStorage.getItem('sys_equipped') || "{}");
+            document.getElementById('char-base').innerText = PATH_DATA[pk].base;
+            document.getElementById('equipped-hat').innerText = eq.hat || "";
+            document.getElementById('equipped-back').innerText = eq.back || "";
+        }
+
+        function resetIdentity() { if(confirm("Abandon path? (Gear stays)")) { localStorage.removeItem('user_path'); location.reload(); } }
 
         window.onload = function() {
             const path = localStorage.getItem('user_path');
-            if(path) { document.getElementById('identity-overlay').style.display = 'none'; applyTheme(path); initMap(); }
+            if(path) { document.getElementById('identity-overlay').style.display='none'; applyTheme(path); initMap(); }
             checkMultiplier();
         };
     </script>
