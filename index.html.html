@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hunter's Log Pose</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --neon-blue: #00E5FF;
+            --neon-purple: #9D50BB;
+            --bg-black: #050505;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-black);
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            border: 2px solid var(--neon-purple);
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue);
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #map {
+            flex-grow: 1;
+            margin: 0 15px;
+            border-radius: 15px;
+            border: 1px solid var(--neon-purple);
+            z-index: 1;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 0.7rem; color: #888; display: block; }
+        .stat-value { font-size: 1.2rem; color: var(--neon-blue); font-weight: bold; }
+
+        .btn-container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        #action-btn {
+            width: 80%;
+            padding: 15px;
+            background-color: var(--neon-blue);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--neon-blue);
+            transition: 0.3s;
+        }
+
+        #action-btn.active {
+            background-color: #ff4b2b;
+            box-shadow: 0 0 15px #ff4b2b;
+        }
+    </style>
+</head>
+<body>
+
+    <header>HUNTER'S LOG POSE</header>
+
+    <div id="map"></div>
+
+    <div class="stats-container">
+        <div class="stat-box">
+            <span class="stat-label">TOTAL EXP</span>
+            <span id="total-exp" class="stat-value">0m</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">RANK</span>
+            <span class="stat-value" style="color: var(--neon-purple);">E-RANK</span>
+        </div>
+    </div>
+
+    <div class="btn-container">
+        <button id="action-btn">AWAKEN</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map, userMarker, pathLine;
+        let isTracking = false;
+        let watchId = null;
+        let path = [];
+        let totalDistance = 0;
+
+        // Initialize Map
+        function initMap() {
+            // Default to Taguig/BGC
+            map = L.map('map', { zoomControl: false }).setView([14.5486, 121.0478], 15);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            userMarker = L.circleMarker([14.5486, 121.0478], {
+                color: '#00E5FF',
+                radius: 8,
+                fillOpacity: 1
+            }).addTo(map);
+
+            pathLine = L.polyline([], { color: '#9D50BB', weight: 4 }).addTo(map);
+            
+            // Load saved EXP
+            const savedExp = localStorage.getItem('hunter_exp') || 0;
+            document.getElementById('total-exp').innerText = Math.round(savedExp) + 'm';
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // metres
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        const btn = document.getElementById('action-btn');
+        btn.onclick = () => {
+            if (!isTracking) {
+                startHunt();
+            } else {
+                stopHunt();
+            }
+        };
+
+        function startHunt() {
+            isTracking = true;
+            btn.innerText = "END QUEST";
+            btn.classList.add('active');
+            path = [];
+            totalDistance = 0;
+
+            watchId = navigator.geolocation.watchPosition((pos) => {
+                const { latitude, longitude } = pos.coords;
+                const newPos = [latitude, longitude];
+                
+                if (path.length > 0) {
+                    const lastPos = path[path.length - 1];
+                    totalDistance += calculateDistance(lastPos[0], lastPos[1], latitude, longitude);
+                }
+                
+                path.push(newPos);
+                userMarker.setLatLng(newPos);
+                pathLine.setLatLngs(path);
+                map.panTo(newPos);
+            }, (err) => console.error(err), { enableHighAccuracy: true });
+        }
+
+        function stopHunt() {
+            isTracking = false;
+            btn.innerText = "AWAKEN";
+            btn.classList.remove('active');
+            navigator.geolocation.clearWatch(watchId);
+
+            // Save EXP locally
+            let currentTotal = parseFloat(localStorage.getItem('hunter_exp') || 0);
+            currentTotal += totalDistance;
+            localStorage.setItem('hunter_exp', currentTotal);
+            document.getElementById('total-exp').innerText = Math.round(currentTotal) + 'm';
+            
+            alert(`Quest Complete! Gained ${Math.round(totalDistance)}m EXP.`);
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
