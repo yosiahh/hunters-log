@@ -3,126 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Grand Line Log Pose</title>
+    <title>System: Grand Line Log Pose</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
+            --neon-blue: #00E5FF;
+            --neon-purple: #9D50BB;
             --gold: #FFD700;
-            --marine-blue: #003366;
-            --crimson: #990000;
-            --parchment: #f4e4bc;
-            --bg-dark: #0a0a0e;
+            --crimson: #ff4b2b;
+            --bg-black: #050505;
+            --panel-bg: rgba(20, 20, 25, 0.95);
         }
 
         body {
-            margin: 0; background: var(--bg-dark); color: white;
-            font-family: 'Georgia', serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            margin: 0; padding: 0; background-color: var(--bg-black); color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* --- INTRO --- */
+        /* --- SYSTEM INTRO --- */
         #intro-screen {
-            position: fixed; inset: 0; background: radial-gradient(circle, #1a1a2e, #000); z-index: 999;
+            position: fixed; inset: 0; background: black; z-index: 999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.8s; text-align: center;
+            transition: opacity 1s;
         }
+        .pulse { animation: pulse-anim 2s infinite; color: var(--neon-blue); letter-spacing: 4px; font-weight: bold; }
+        @keyframes pulse-anim { 0%, 100% { opacity: 1; text-shadow: 0 0 10px var(--neon-blue); } 50% { opacity: 0.3; } }
 
         /* --- TABS --- */
         .tab-content { display: none; flex-grow: 1; overflow-y: auto; padding-bottom: 90px; }
         .tab-content.active { display: flex; flex-direction: column; }
 
-        #map { flex-grow: 1; width: 100%; border-bottom: 2px solid var(--gold); }
+        #map { flex-grow: 1; width: 100%; border-bottom: 1px solid var(--neon-purple); }
 
-        /* --- UI ELEMENTS --- */
-        .log-card {
-            background: rgba(244, 228, 188, 0.1); margin: 10px 15px; padding: 15px;
-            border: 1px solid var(--gold); border-radius: 8px;
+        /* --- UI CARDS --- */
+        .card {
+            background: var(--panel-bg); margin: 10px 15px; padding: 15px;
+            border: 1px solid #333; border-left: 4px solid var(--gold); border-radius: 4px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .delete-btn { color: var(--crimson); border: none; background: none; font-size: 1.5rem; cursor: pointer; }
+        .delete-btn { color: var(--crimson); background: none; border: none; font-size: 1.5rem; padding: 0 10px; }
 
-        .items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
+        /* --- VAULT GRID --- */
+        .items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 15px; }
         .item-slot { 
-            background: #1a1a1a; border: 1px solid #333; padding: 15px; 
-            border-radius: 10px; text-align: center; transition: 0.3s;
+            background: #111; border: 1px solid #222; padding: 15px; border-radius: 8px; 
+            text-align: center; opacity: 0.3; grayscale: 1; transition: 0.5s;
         }
-        .item-slot.unlocked { border-color: var(--gold); background: rgba(255, 215, 0, 0.1); }
+        .item-slot.unlocked { opacity: 1; grayscale: 0; border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); }
 
-        /* --- NAV --- */
+        /* --- NAV BAR --- */
         nav {
             position: fixed; bottom: 0; width: 100%; height: 75px;
-            background: #111; border-top: 2px solid var(--gold);
+            background: rgba(5, 5, 5, 0.98); border-top: 1px solid var(--neon-purple);
             display: flex; justify-content: space-around; align-items: center; z-index: 100;
         }
-        .nav-item { color: #666; font-size: 0.7rem; text-align: center; font-weight: bold; }
-        .nav-item.active { color: var(--gold); }
+        .nav-item { color: #555; font-size: 0.7rem; text-align: center; text-transform: uppercase; font-weight: bold; }
+        .nav-item.active { color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue); }
 
-        .btn-voyage {
-            background: linear-gradient(135deg, var(--gold), #b8860b); color: black; border: none;
-            padding: 15px 45px; border-radius: 5px; font-weight: bold; margin: 20px; align-self: center;
+        .btn-action {
+            width: 80%; padding: 15px; border: none; border-radius: 5px; margin: 15px auto;
+            font-weight: bold; font-size: 1rem; letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+            box-shadow: 0 0 15px var(--neon-blue); color: black;
         }
     </style>
 </head>
 <body>
 
-    <div id="intro-screen" onclick="startVoyage()">
-        <div style="font-size: 5rem;">🧭</div>
-        <h1 style="color: var(--gold);">LOG POSE SET</h1>
-        <p style="color: #aaa; font-style: italic;">Tap to begin Voyage</p>
+    <div id="intro-screen" onclick="awakenSystem()">
+        <div class="pulse">INITIALIZING LOG POSE...</div>
+        <p style="font-size: 0.8rem; color: #555; margin-top: 10px;">[ TAP TO AWAKEN ]</p>
     </div>
 
-    <div id="tab-voyage" class="tab-content active">
+    <div id="tab-quest" class="tab-content active">
         <div id="map"></div>
-        <button id="action-btn" class="btn-voyage">SET SAIL</button>
+        <button id="action-btn" class="btn-action">SET SAIL</button>
     </div>
 
     <div id="tab-records" class="tab-content">
-        <header style="text-align: center; padding: 15px; color: var(--gold);">PIRATE RECORDS</header>
+        <header style="padding: 20px; color: var(--neon-purple); font-weight: bold;">[ SYSTEM LOGS ]</header>
         <div id="logs-container"></div>
     </div>
 
     <div id="tab-vault" class="tab-content">
-        <header style="text-align: center; padding: 15px; color: var(--gold);">TREASURE VAULT</header>
+        <header style="padding: 20px; color: var(--gold); font-weight: bold;">[ TREASURE VAULT ]</header>
         <div id="items-grid" class="items-grid"></div>
     </div>
 
     <div id="tab-status" class="tab-content">
         <div style="text-align: center; margin-top: 40px;">
-            <div style="border: 10px solid var(--parchment); background: var(--parchment); color: #332; padding: 20px; width: 180px; margin: 0 auto;">
-                <p style="font-weight: bold; margin: 0;">WANTED</p>
-                <div style="height: 120px; background: #bbb; margin: 10px 0;"></div>
-                <h2 id="total-beli-display" style="margin: 0;">฿0</h2>
+            <div style="border: 4px solid var(--gold); display: inline-block; padding: 20px; background: #111;">
+                <p style="color: var(--gold); margin: 0; font-weight: bold; letter-spacing: 3px;">WANTED</p>
+                <div style="width: 150px; height: 150px; background: #222; margin: 15px auto; border: 1px solid #444; display: flex; align-items: center; justify-content: center; color: #444;">NO PHOTO</div>
+                <h2 id="status-beli" style="margin: 0; color: white;">฿0</h2>
+                <p style="font-size: 0.7rem; color: #888; margin-top: 5px;">CURRENT BOUNTY</p>
             </div>
-            <h3 id="rank-display" style="color: var(--gold); margin-top: 20px;">ROOKIE</h3>
+            <h1 id="status-rank" style="margin-top: 25px; color: var(--neon-purple); text-shadow: 0 0 10px var(--neon-purple);">E-RANK</h1>
         </div>
     </div>
 
     <nav>
-        <div class="nav-item active" onclick="switchTab('voyage', this)">VOYAGE</div>
-        <div class="nav-item" onclick="switchTab('records', this)">RECORDS</div>
+        <div class="nav-item active" onclick="switchTab('quest', this)">QUEST</div>
+        <div class="nav-item" onclick="switchTab('records', this)">LOGS</div>
         <div class="nav-item" onclick="switchTab('vault', this)">VAULT</div>
-        <div class="nav-item" onclick="switchTab('status', this)">STATUS</div>
+        <div class="nav-item" onclick="switchTab('status', this)">PLAYER</div>
     </nav>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         let map, userMarker, pathLine, watchId, isTracking = false, currentPath = [], huntDist = 0;
 
-        const REWARDS = [
-            { id: 'igris', name: "Igris's Cape", dist: 5000, icon: "🧤", desc: "5km Milestone" },
-            { id: 'nami', name: "Nami's Log Pose", dist: 11000, icon: "🧭", desc: "BGC to MOA" },
-            { id: 'hat', name: "Straw Hat", dist: 40000, icon: "👒", desc: "Pirate King Dist." }
+        const TREASURES = [
+            { id: 'igris', name: "Igris's Cape", dist: 5000, icon: "🧤", desc: "S-Rank Shadow Gear" },
+            { id: 'nami', name: "Nami's Log Pose", dist: 11000, icon: "🧭", desc: "BGC to MOA Nav" },
+            { id: 'hat', name: "Straw Hat", dist: 50000, icon: "👒", desc: "Pirate King's Will" }
         ];
 
-        function startVoyage() {
+        function awakenSystem() {
             document.getElementById('intro-screen').style.opacity = '0';
-            setTimeout(() => { document.getElementById('intro-screen').style.display = 'none'; initMap(); }, 800);
+            setTimeout(() => { document.getElementById('intro-screen').style.display = 'none'; initMap(); }, 1000);
         }
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([14.5486, 121.0478], 16);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
-            userMarker = L.circleMarker([14.5486, 121.0478], { color: '#990000', radius: 7 }).addTo(map);
-            pathLine = L.polyline([], { color: '#b8860b', weight: 4, dashArray: '10, 10' }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            userMarker = L.circleMarker([14.5486, 121.0478], { color: '#00E5FF', radius: 6, fillOpacity: 1 }).addTo(map);
+            pathLine = L.polyline([], { color: '#9D50BB', weight: 3 }).addTo(map);
         }
 
         function switchTab(tabId, el) {
@@ -137,7 +144,8 @@
 
         document.getElementById('action-btn').onclick = function() {
             if(!isTracking) {
-                isTracking = true; this.innerText = "ANCHOR SHIP"; this.style.background = "var(--crimson)";
+                isTracking = true; this.innerText = "END QUEST"; this.style.background = "var(--crimson)";
+                this.style.boxShadow = "0 0 15px var(--crimson)";
                 huntDist = 0; currentPath = [];
                 watchId = navigator.geolocation.watchPosition(p => {
                     const pos = [p.coords.latitude, p.coords.longitude];
@@ -145,62 +153,70 @@
                     currentPath.push(pos); userMarker.setLatLng(pos); pathLine.setLatLngs(currentPath); map.panTo(pos);
                 }, null, {enableHighAccuracy:true});
             } else {
-                stopHunt();
+                stopQuest();
             }
         };
 
-        function stopHunt() {
+        function stopQuest() {
             isTracking = false; navigator.geolocation.clearWatch(watchId);
             const btn = document.getElementById('action-btn');
-            btn.innerText = "SET SAIL"; btn.style.background = "linear-gradient(135deg, var(--gold), #b8860b)";
+            btn.innerText = "SET SAIL"; btn.style.background = "linear-gradient(90deg, var(--neon-blue), var(--neon-purple))";
+            btn.style.boxShadow = "0 0 15px var(--neon-blue)";
             
             if(huntDist > 5) {
+                if (window.navigator.vibrate) window.navigator.vibrate(200); // iPhone haptic
                 const log = { id: Date.now(), date: new Date().toLocaleDateString(), dist: Math.round(huntDist) };
-                let logs = JSON.parse(localStorage.getItem('op_logs_v3') || "[]");
-                logs.unshift(log); localStorage.setItem('op_logs_v3', JSON.stringify(logs));
+                let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
+                logs.unshift(log); localStorage.setItem('system_logs_v4', JSON.stringify(logs));
                 checkUnlocks(logs.reduce((s, l) => s + l.dist, 0));
-                alert(`Island Found! +฿${log.dist}`);
+                alert(`[QUEST CLEARED] Reward: ฿${log.dist}`);
             }
         }
 
         function checkUnlocks(total) {
-            let unlocked = JSON.parse(localStorage.getItem('unlocked_items') || "[]");
-            REWARDS.forEach(r => { if(total >= r.dist && !unlocked.includes(r.id)) unlocked.push(r.id); });
-            localStorage.setItem('unlocked_items', JSON.stringify(unlocked));
+            let unlocked = JSON.parse(localStorage.getItem('system_vault') || "[]");
+            TREASURES.forEach(t => { if(total >= t.dist && !unlocked.includes(t.id)) unlocked.push(t.id); });
+            localStorage.setItem('system_vault', JSON.stringify(unlocked));
         }
 
         function renderLogs() {
-            const logs = JSON.parse(localStorage.getItem('op_logs_v3') || "[]");
+            const logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
             document.getElementById('logs-container').innerHTML = logs.map(l => `
-                <div class="log-card">
-                    <div><div style="font-size:0.7rem; color:var(--gold);">${l.date}</div><b>฿${l.dist.toLocaleString()}</b></div>
+                <div class="card">
+                    <div><div style="font-size:0.7rem; color:#666;">${l.date}</div><b style="color:var(--neon-blue)">฿${l.dist.toLocaleString()}</b></div>
                     <button class="delete-btn" onclick="deleteLog(${l.id})">×</button>
                 </div>
-            `).join('') || '<p style="text-align:center;">No Voyages.</p>';
+            `).join('') || '<p style="text-align:center; color:#333;">NO DATA FOUND</p>';
         }
 
         window.deleteLog = function(id) {
-            let logs = JSON.parse(localStorage.getItem('op_logs_v3') || "[]");
-            localStorage.setItem('op_logs_v3', JSON.stringify(logs.filter(l => l.id !== id)));
-            renderLogs();
+            if(confirm("[SYSTEM] Delete this record forever?")) {
+                let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
+                localStorage.setItem('system_logs_v4', JSON.stringify(logs.filter(l => l.id !== id)));
+                renderLogs();
+            }
         }
 
         function renderVault() {
-            const unlocked = JSON.parse(localStorage.getItem('unlocked_items') || "[]");
-            document.getElementById('items-grid').innerHTML = REWARDS.map(r => {
-                const isU = unlocked.includes(r.id);
+            const unlocked = JSON.parse(localStorage.getItem('system_vault') || "[]");
+            document.getElementById('items-grid').innerHTML = TREASURES.map(t => {
+                const isU = unlocked.includes(t.id);
                 return `<div class="item-slot ${isU ? 'unlocked' : ''}">
-                    <div style="font-size:2rem;">${isU ? r.icon : '❓'}</div>
-                    <div style="font-size:0.7rem; font-weight:bold;">${isU ? r.name : 'LOCKED'}</div>
+                    <div style="font-size:2rem;">${isU ? t.icon : '❓'}</div>
+                    <div style="font-size:0.7rem; font-weight:bold; margin-top:5px;">${isU ? t.name : 'LOCKED'}</div>
                 </div>`;
             }).join('');
         }
 
         function updateStatus() {
-            const logs = JSON.parse(localStorage.getItem('op_logs_v3') || "[]");
+            const logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
             const total = logs.reduce((s, l) => s + l.dist, 0);
-            document.getElementById('total-beli-display').innerText = "฿" + total.toLocaleString();
-            document.getElementById('rank-display').innerText = total > 50000 ? "WARLORD" : total > 10000 ? "SUPERNOVA" : "ROOKIE";
+            document.getElementById('status-beli').innerText = "฿" + total.toLocaleString();
+            let rank = "E-RANK";
+            if(total > 50000) rank = "S-RANK / EMPEROR";
+            else if(total > 25000) rank = "A-RANK / WARLORD";
+            else if(total > 11000) rank = "B-RANK / SUPERNOVA";
+            document.getElementById('status-rank').innerText = rank;
         }
     </script>
 </body>
