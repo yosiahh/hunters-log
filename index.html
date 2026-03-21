@@ -3,521 +3,860 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>STRIDE — Personal Run Tracker</title>
+<title>STRIDE — RPG Run Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Unbounded:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Rajdhani:wght@400;500;600;700&family=Unbounded:wght@300;400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --surface2: #1a1a1a;
-    --border: #222222;
-    --accent: #c8f135;
-    --accent-dim: rgba(200, 241, 53, 0.12);
-    --text: #f0f0f0;
-    --text-muted: #555;
-    --text-dim: #888;
-    --red: #ff4444;
-    --font-display: 'Unbounded', sans-serif;
-    --font-mono: 'DM Mono', monospace;
-    --radius: 4px;
-  }
+:root {
+  --bg: #080c0a;
+  --surface: #0e1410;
+  --surface2: #131a14;
+  --border: #1e2b1f;
+  --border2: #243026;
+  --accent: #a8ff3e;
+  --accent2: #7ee83a;
+  --accent-dim: rgba(168,255,62,0.10);
+  --accent-glow: rgba(168,255,62,0.25);
+  --text: #e8f5e0;
+  --text-muted: #445544;
+  --text-dim: #7a9a7a;
+  --red: #ff4455;
+  --gold: #ffd166;
+  --blue: #4fc3f7;
+  --purple: #b39ddb;
+  --font-display: 'Unbounded', sans-serif;
+  --font-ui: 'Rajdhani', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --r: 3px;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    overflow: hidden;
-    -webkit-font-smoothing: antialiased;
-  }
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ── LAYOUT ── */
+/* Subtle scanline atmosphere */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── LAYOUT ── */
+#app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: 100vh;
+  height: 100vh;
+}
+
+/* ── PANEL ── */
+#panel {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+  position: relative;
+}
+
+#panel::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--accent-glow), transparent);
+  pointer-events: none;
+}
+
+/* ── HEADER ── */
+#header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  text-transform: uppercase;
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  margin-top: 2px;
+}
+
+.player-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.player-level {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+
+.xp-bar-mini {
+  width: 76px;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 2px;
+  transition: width 0.8s ease;
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+
+.xp-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 0.07em;
+}
+
+/* ── TABS ── */
+#tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.tab.active { color: var(--accent); background: var(--accent-dim); }
+.tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+.tab:hover:not(.active) { color: var(--text-dim); }
+
+.tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.tab-content.active { display: flex; }
+
+/* ── STATS ── */
+#stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.stat-box {
+  background: var(--bg);
+  padding: 14px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: 4px; left: 4px;
+  width: 7px; height: 7px;
+  border-top: 1px solid var(--border2);
+  border-left: 1px solid var(--border2);
+  pointer-events: none;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.stat-unit {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+#stat-time { grid-column: 1 / -1; background: var(--surface); padding: 12px 14px; }
+#stat-time .stat-value { font-size: 44px; letter-spacing: -0.04em; }
+
+/* ── XP STRIP ── */
+#xp-strip {
+  flex-shrink: 0;
+  padding: 7px 14px 5px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--surface);
+}
+
+.xp-strip-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  min-width: 36px;
+}
+
+.xp-strip-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.xp-strip-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 2px;
+  transition: width 0.8s ease;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.xp-strip-fill.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -50px;
+  width: 30px; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer { 0% { left: -50px; } 100% { left: 100%; } }
+
+.xp-strip-next {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  color: var(--text-muted);
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+
+/* ── STATUS ── */
+.status-row {
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.dot.ready { background: var(--text-muted); }
+.dot.recording { background: var(--accent); animation: dotpulse 1.4s ease-in-out infinite; box-shadow: 0 0 5px var(--accent); }
+.dot.paused { background: var(--gold); }
+.dot.no-gps { background: var(--red); }
+
+@keyframes dotpulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.status-text {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.xp-earning {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--accent);
+  letter-spacing: 0.07em;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.xp-earning.visible { opacity: 1; }
+
+/* ── CONTROLS ── */
+#controls {
+  padding: 10px 12px;
+  display: flex;
+  gap: 7px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--r);
+  transition: all 0.15s;
+}
+
+.btn:hover { border-color: var(--text-dim); color: var(--text); }
+
+.btn.primary {
+  background: var(--accent);
+  color: #050905;
+  border-color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 0 14px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.btn.primary:hover { background: #b5ff4a; box-shadow: 0 0 22px var(--accent-glow), 0 2px 10px rgba(0,0,0,0.4); }
+
+.btn.primary.idle-glow { animation: startglow 2.5s ease-in-out infinite; }
+@keyframes startglow {
+  0%, 100% { box-shadow: 0 0 14px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 28px rgba(168,255,62,0.45), 0 2px 10px rgba(0,0,0,0.4); }
+}
+
+.btn.danger { border-color: var(--border); color: var(--text-muted); }
+.btn.danger:hover { border-color: var(--red); color: var(--red); }
+.btn:disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
+
+/* ── ROUTE INFO ── */
+#route-info {
+  padding: 7px 14px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── HISTORY ── */
+#history-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.history-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  line-height: 2;
+}
+
+.history-empty .big-icon { font-size: 30px; display: block; margin-bottom: 14px; opacity: 0.2; }
+
+.run-card {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.run-card:hover { background: var(--surface); }
+.run-card.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); }
+
+.run-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7px;
+}
+
+.run-card-date { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; }
+.run-card-xp { font-family: var(--font-mono); font-size: 8px; color: var(--accent); letter-spacing: 0.07em; }
+
+.run-card-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 9px; }
+
+.run-metric-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+.run-metric-val { font-family: var(--font-display); font-size: 14px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
+
+.run-card-actions { display: flex; gap: 5px; }
+
+.mini-btn {
+  padding: 4px 8px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: var(--r);
+  transition: all 0.15s;
+}
+
+.mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mini-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+#export-bar {
+  padding: 9px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  gap: 7px;
+}
+
+/* ── MAP ── */
+#map-container { position: relative; background: #060a07; }
+#map { width: 100%; height: 100%; }
+.leaflet-tile { filter: brightness(0.55) saturate(0.5) contrast(1.1); }
+.leaflet-container { background: #060a07; }
+.leaflet-control-zoom a { background: var(--surface) !important; color: var(--text-dim) !important; border-color: var(--border) !important; font-family: var(--font-mono) !important; }
+
+#map-overlay {
+  position: absolute;
+  top: 12px; right: 12px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.map-badge {
+  background: rgba(8,12,10,0.93);
+  border: 1px solid var(--border2);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  border-radius: var(--r);
+}
+
+.map-badge span { color: var(--accent); font-family: var(--font-display); font-size: 13px; display: block; margin-top: 2px; }
+
+/* ══════════════════════════════════════
+   POST-RUN OVERLAY
+══════════════════════════════════════ */
+#post-run-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(5,8,6,0.97);
+  z-index: 2000;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#post-run-overlay.show { display: flex; }
+
+.post-run-inner {
+  width: 100%;
+  max-width: 440px;
+  padding: 28px 22px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* System Notification */
+.sys-notification {
+  background: linear-gradient(135deg, rgba(168,255,62,0.07), rgba(168,255,62,0.02));
+  border: 1px solid rgba(168,255,62,0.5);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  text-align: center;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(-8px);
+  box-shadow: 0 0 28px rgba(168,255,62,0.07), inset 0 1px 0 rgba(168,255,62,0.08);
+}
+
+.sys-notification.appear { animation: sysappear 0.5s cubic-bezier(0.2,0.8,0.3,1) forwards; }
+
+@keyframes sysappear { to { opacity: 1; transform: translateY(0); } }
+
+.sys-tag { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; }
+.sys-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: 0.04em; margin-bottom: 3px; }
+.sys-sub { font-family: var(--font-mono); font-size: 8px; color: var(--text-dim); letter-spacing: 0.1em; }
+
+/* Summary stats */
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 1px;
+  background: var(--border);
+  margin-bottom: 20px;
+  opacity: 0;
+}
+
+.summary-stats.appear { animation: fadeup 0.4s 0.3s ease forwards; }
+
+@keyframes fadeup { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+.sum-stat { background: var(--surface); padding: 13px 10px; text-align: center; }
+.sum-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+.sum-val { font-family: var(--font-display); font-size: 22px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
+.sum-unit { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); margin-top: 2px; }
+
+/* XP Gain */
+.xp-gain-section { margin-bottom: 18px; opacity: 0; }
+.xp-gain-section.appear { animation: fadeup 0.4s 0.5s ease forwards; }
+
+.xp-gain-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.xp-gain-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.14em; color: var(--text-dim); text-transform: uppercase; }
+
+.xp-gain-amount {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent-glow);
+  opacity: 0;
+}
+
+.xp-gain-amount.pop { animation: xppop 0.5s 0.8s cubic-bezier(0.2,0.8,0.3,1.2) forwards; }
+
+@keyframes xppop {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.xp-full-bar { height: 9px; background: var(--border2); border-radius: 5px; overflow: hidden; margin-bottom: 5px; position: relative; }
+
+.xp-full-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent2), var(--accent));
+  border-radius: 5px;
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 9px var(--accent-glow);
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-full-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -35px;
+  width: 25px; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: barshimmer 1.5s 1s ease-in-out forwards;
+}
+
+@keyframes barshimmer { from { left: -35px; } to { left: 100%; } }
+
+.xp-bar-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); letter-spacing: 0.07em; }
+
+/* Stat increases */
+.stat-increases { margin-bottom: 18px; opacity: 0; }
+.stat-increases.appear { animation: fadeup 0.4s 0.7s ease forwards; }
+
+.stat-inc-title { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+
+.stat-row { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.stat-row-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; min-width: 76px; }
+.stat-row-bar { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+
+.stat-row-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 1s ease; }
+.stat-row-fill.stamina { background: linear-gradient(90deg, #4fc3f7, #81d4fa); box-shadow: 0 0 5px rgba(79,195,247,0.4); }
+.stat-row-fill.speed { background: linear-gradient(90deg, var(--accent2), var(--accent)); box-shadow: 0 0 5px var(--accent-glow); }
+.stat-row-fill.endurance { background: linear-gradient(90deg, #b39ddb, #ce93d8); box-shadow: 0 0 5px rgba(179,157,219,0.4); }
+
+.stat-row-delta { font-family: var(--font-mono); font-size: 8px; color: var(--accent); min-width: 28px; text-align: right; opacity: 0; transition: opacity 0.3s 1.2s; }
+.stat-row-delta.show { opacity: 1; }
+
+/* Level up */
+.levelup-banner {
+  display: none;
+  text-align: center;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(255,209,102,0.08), rgba(255,209,102,0.03));
+  border: 1px solid var(--gold);
+  border-radius: var(--r);
+  box-shadow: 0 0 28px rgba(255,209,102,0.1);
+}
+
+.levelup-banner.show { display: block; animation: levelbang 0.6s 1.5s cubic-bezier(0.2,0.8,0.3,1.3) both; }
+
+@keyframes levelbang {
+  0% { opacity: 0; transform: scale(0.82); }
+  60% { transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.levelup-tag { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
+.levelup-num { font-family: var(--font-display); font-size: 34px; font-weight: 700; color: var(--gold); letter-spacing: -0.02em; text-shadow: 0 0 18px rgba(255,209,102,0.5); line-height: 1; }
+.levelup-sub { font-family: var(--font-ui); font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; margin-top: 3px; }
+
+/* Chests */
+.chest-section { text-align: center; margin-bottom: 22px; opacity: 0; }
+.chest-section.appear { animation: fadeup 0.4s 1.1s ease forwards; }
+
+.chest-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; }
+
+.chest-row { display: flex; justify-content: center; gap: 12px; }
+
+.chest {
+  width: 76px;
+  height: 76px;
+  cursor: pointer;
+  position: relative;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  background: var(--surface2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.chest:hover { transform: translateY(-2px); }
+.chest.common:hover { border-color: var(--text-dim); box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+.chest.rare { border-color: rgba(79,195,247,0.35); }
+.chest.rare:hover { border-color: var(--blue); box-shadow: 0 4px 18px rgba(79,195,247,0.2); }
+.chest.epic { border-color: rgba(179,157,219,0.35); }
+.chest.epic:hover { border-color: var(--purple); box-shadow: 0 4px 18px rgba(179,157,219,0.2); }
+.chest.opened { opacity: 0.35; cursor: default; transform: none !important; }
+
+.chest-pixel { font-size: 30px; line-height: 1; }
+.chest-tier { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; }
+.chest.common .chest-tier { color: var(--text-muted); }
+.chest.rare .chest-tier { color: var(--blue); }
+.chest.epic .chest-tier { color: var(--purple); }
+.chest-lock { position: absolute; top: 4px; right: 4px; font-size: 8px; opacity: 0.35; }
+
+/* Dismiss */
+#post-run-dismiss {
+  width: 100%;
+  max-width: 440px;
+  padding: 0 22px 36px;
+  opacity: 0;
+}
+
+#post-run-dismiss.appear { animation: fadeup 0.4s 1.8s ease forwards; }
+
+/* ── REWARD POPUP ── */
+#reward-popup {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5,8,6,0.87);
+  backdrop-filter: blur(5px);
+}
+
+#reward-popup.show { display: flex; }
+
+.reward-box {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  padding: 30px 26px;
+  text-align: center;
+  border-radius: 4px;
+  max-width: 250px;
+  width: 90%;
+  animation: rewardpop 0.4s cubic-bezier(0.2,0.8,0.3,1.3);
+}
+
+@keyframes rewardpop { from { opacity: 0; transform: scale(0.72) translateY(16px); } to { opacity: 1; transform: none; } }
+
+.reward-box.rare { border-color: var(--blue); box-shadow: 0 0 36px rgba(79,195,247,0.12); }
+.reward-box.epic { border-color: var(--purple); box-shadow: 0 0 36px rgba(179,157,219,0.12); }
+
+.reward-rarity { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 10px; }
+.reward-rarity.common { color: var(--text-muted); }
+.reward-rarity.rare { color: var(--blue); }
+.reward-rarity.epic { color: var(--purple); }
+
+.reward-icon { font-size: 50px; margin-bottom: 8px; display: block; }
+.reward-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.04em; margin-bottom: 6px; }
+.reward-desc { font-family: var(--font-mono); font-size: 8px; color: var(--text-dim); letter-spacing: 0.05em; line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
+
+/* ── GPS MODAL ── */
+#gps-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+#gps-modal.show { display: flex; }
+
+.modal-box { background: var(--surface); border: 1px solid var(--border2); padding: 28px; max-width: 290px; text-align: center; }
+.modal-box h3 { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; }
+.modal-box p { font-family: var(--font-mono); font-size: 9px; line-height: 1.7; color: var(--text-dim); letter-spacing: 0.05em; margin-bottom: 18px; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 999;
+  border-radius: var(--r);
+  white-space: nowrap;
+}
+
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── MOBILE ── */
+@media (max-width: 700px) {
+  html, body { overflow: hidden; height: 100%; }
+
   #app {
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    grid-template-rows: 100vh;
-    height: 100vh;
-  }
-
-  /* ── LEFT PANEL ── */
-  #panel {
-    background: var(--bg);
-    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
+    height: 100dvh;
     overflow: hidden;
-    z-index: 10;
   }
 
-  #header {
-    padding: 24px 24px 20px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+  #map-container { flex: 1 1 0; min-height: 0; order: 2; }
 
-  .logo {
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.25em;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-
-  .logo-sub {
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    margin-top: 3px;
-  }
-
-  /* ── TABS ── */
-  #tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .tab {
-    flex: 1;
-    padding: 12px;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s;
-  }
-
-  .tab.active {
-    color: var(--accent);
-    background: var(--accent-dim);
-  }
-
-  .tab:hover:not(.active) { color: var(--text-dim); }
-
-  .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-  .tab-content.active { display: flex; }
-
-  /* ── RECORD TAB ── */
-  #stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .stat-box {
-    background: var(--bg);
-    padding: 20px 18px;
-  }
-
-  .stat-label {
-    font-size: 9px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-  }
-
-  .stat-value {
-    font-family: var(--font-display);
-    font-size: 26px;
-    font-weight: 300;
-    color: var(--text);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-
-  .stat-value.big {
-    font-size: 38px;
-  }
-
-  .stat-unit {
-    font-size: 10px;
-    color: var(--text-muted);
-    margin-top: 3px;
-    letter-spacing: 0.05em;
-  }
-
-  #stat-time { grid-column: 1 / -1; background: var(--surface); }
-  #stat-time .stat-value { font-size: 52px; letter-spacing: -0.04em; }
-
-  /* Status dot */
-  .status-row {
-    padding: 12px 18px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    transition: background 0.3s;
-    flex-shrink: 0;
-  }
-
-  .dot.ready { background: var(--text-dim); }
-  .dot.recording { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
-  .dot.paused { background: #f5a623; animation: none; }
-  .dot.no-gps { background: var(--red); }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.85); }
-  }
-
-  .status-text {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-
-  /* Controls */
-  #controls {
-    padding: 16px;
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .btn {
-    flex: 1;
-    padding: 14px 8px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text-dim);
-    cursor: pointer;
-    border-radius: var(--radius);
-    transition: all 0.15s;
-  }
-
-  .btn:hover { border-color: var(--text-muted); color: var(--text); }
-
-  .btn.primary {
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent);
-    font-weight: 500;
-  }
-
-  .btn.primary:hover { background: #d4f545; }
-
-  .btn.danger {
-    border-color: #333;
-    color: var(--text-muted);
-  }
-
-  .btn.danger:hover { border-color: var(--red); color: var(--red); }
-
-  .btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
-
-  /* Route preview line */
-  #route-info {
-    padding: 12px 18px;
-    font-size: 9px;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  /* ── HISTORY TAB ── */
-  #history-list {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .history-empty {
-    padding: 40px 24px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    line-height: 1.8;
-  }
-
-  .history-empty .big-icon {
-    font-size: 36px;
-    display: block;
-    margin-bottom: 16px;
-    opacity: 0.3;
-  }
-
-  .run-card {
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.15s;
-    position: relative;
-  }
-
-  .run-card:hover { background: var(--surface); }
-  .run-card.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); }
-
-  .run-card-date {
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .run-card-metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-  }
-
-  .run-metric-label {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-
-  .run-metric-val {
-    font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 300;
-    color: var(--text);
-    letter-spacing: -0.02em;
-  }
-
-  .run-card-actions {
-    display: flex;
-    gap: 6px;
-    margin-top: 12px;
-  }
-
-  .mini-btn {
-    padding: 5px 10px;
-    font-family: var(--font-mono);
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    cursor: pointer;
-    border-radius: var(--radius);
-    transition: all 0.15s;
-  }
-
-  .mini-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .mini-btn.del:hover { border-color: var(--red); color: var(--red); }
-
-  /* Export bar */
-  #export-bar {
-    padding: 12px 16px;
+  #panel {
+    order: 3;
+    flex: 0 0 auto;
+    border-right: none;
     border-top: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    gap: 8px;
+    max-height: 54vh;
+    overflow: hidden;
   }
 
-  /* ── MAP ── */
-  #map-container {
-    position: relative;
-    background: #0d0d0d;
-  }
+  #header { padding: 7px 12px; }
+  .logo-sub { display: none; }
+  .tab { padding: 9px 6px; font-size: 10px; }
 
-  #map {
-    width: 100%;
-    height: 100%;
-  }
+  #stats-grid { grid-template-columns: repeat(4, 1fr); }
+  #stat-time { grid-column: 1 / -1; }
+  #stat-time .stat-value { font-size: 26px; }
+  .stat-value { font-size: 16px; }
+  .stat-box { padding: 8px 9px; }
+  .stat-box::before { display: none; }
 
-  /* Leaflet dark filter — no hue-rotate so map stays readable */
-  .leaflet-tile { filter: brightness(0.55) saturate(0.5) contrast(1.1); }
-  .leaflet-container { background: #090909; }
-  .leaflet-control-zoom a {
-    background: var(--surface) !important;
-    color: var(--text-dim) !important;
-    border-color: var(--border) !important;
-    font-family: var(--font-mono) !important;
-  }
+  #xp-strip { padding: 5px 10px; }
+  .status-row { padding: 6px 10px; }
+  #controls { padding: 8px 9px; gap: 6px; }
+  .btn { padding: 14px 6px; font-size: 11px; }
+  #route-info { padding: 5px 10px; }
 
-  /* Map overlay info */
-  #map-overlay {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 500;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    pointer-events: none;
-  }
+  .post-run-inner { padding: 20px 16px 8px; }
+  #post-run-dismiss { padding: 0 16px 28px; }
+}
 
-  .map-badge {
-    background: rgba(10,10,10,0.92);
-    border: 1px solid var(--border);
-    padding: 8px 12px;
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    backdrop-filter: blur(8px);
-    border-radius: var(--radius);
-  }
-
-  .map-badge span { color: var(--accent); font-family: var(--font-display); font-size: 14px; display: block; margin-top: 2px; }
-
-  /* No GPS modal */
-  #gps-modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #gps-modal.show { display: flex; }
-
-  .modal-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 32px;
-    max-width: 320px;
-    text-align: center;
-  }
-
-  .modal-box h3 {
-    font-family: var(--font-display);
-    font-size: 14px;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    margin-bottom: 12px;
-    text-transform: uppercase;
-  }
-
-  .modal-box p {
-    font-size: 11px;
-    line-height: 1.7;
-    color: var(--text-dim);
-    letter-spacing: 0.05em;
-    margin-bottom: 20px;
-  }
-
-  /* Toast */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 10px 20px;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: var(--text-dim);
-    opacity: 0;
-    transition: all 0.3s;
-    z-index: 999;
-    border-radius: var(--radius);
-    white-space: nowrap;
-  }
-
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* ── RESPONSIVE ── */
-  @media (max-width: 700px) {
-    html, body { overflow: hidden; height: 100%; }
-
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    /* Map fills remaining space between header area and panel */
-    #map-container {
-      flex: 1 1 0;
-      min-height: 0;
-      order: 2;
-    }
-
-    /* Panel pinned at bottom, fixed height */
-    #panel {
-      order: 3;
-      flex: 0 0 auto;
-      border-right: none;
-      border-top: 1px solid var(--border);
-      max-height: 52vh;
-      overflow: hidden;
-    }
-
-    /* Shrink header */
-    #header { padding: 10px 16px; }
-    .logo-sub { display: none; }
-
-    /* Tabs */
-    .tab { padding: 9px; font-size: 9px; }
-
-    /* Stats grid — 4 columns, time spans full width */
-    #stats-grid { grid-template-columns: repeat(4, 1fr); }
-    #stat-time { grid-column: 1 / -1; }
-    #stat-time .stat-value { font-size: 28px; }
-    .stat-value { font-size: 18px; }
-    .stat-box { padding: 10px; }
-
-    /* Status */
-    .status-row { padding: 8px 14px; }
-
-    /* Controls — large tap targets */
-    #controls { padding: 10px 12px; }
-    .btn { padding: 16px 8px; font-size: 10px; }
-
-    /* Route info */
-    #route-info { padding: 6px 14px; font-size: 8px; }
-  }
-
-  @media (max-width: 380px) {
-    #stat-time .stat-value { font-size: 22px; }
-    .stat-value { font-size: 15px; }
-    .stat-box { padding: 8px; }
-    .btn { padding: 14px 4px; font-size: 9px; }
-  }
+@media (max-width: 380px) {
+  #stat-time .stat-value { font-size: 22px; }
+  .stat-value { font-size: 14px; }
+  .stat-box { padding: 6px 7px; }
+  .btn { padding: 13px 4px; font-size: 10px; }
+}
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- LEFT PANEL -->
+
+  <!-- PANEL -->
   <div id="panel">
     <div id="header">
-      <div class="logo">Stride</div>
-      <div class="logo-sub">personal run tracker</div>
+      <div>
+        <div class="logo">Stride</div>
+        <div class="logo-sub">personal run tracker</div>
+      </div>
+      <div class="player-hud">
+        <div class="player-level" id="hud-level">LV. 1</div>
+        <div class="xp-bar-mini"><div class="xp-bar-fill" id="hud-xp-fill" style="width:0%"></div></div>
+        <div class="xp-label" id="hud-xp-label">0 / 100 XP</div>
+      </div>
     </div>
 
     <div id="tabs">
@@ -525,7 +864,7 @@
       <button class="tab" onclick="switchTab('history')">History</button>
     </div>
 
-    <!-- RECORD TAB -->
+    <!-- RECORD -->
     <div id="tab-record" class="tab-content active">
       <div id="stats-grid">
         <div class="stat-box" id="stat-time">
@@ -554,31 +893,38 @@
         </div>
       </div>
 
+      <div id="xp-strip">
+        <span class="xp-strip-label" id="xp-lv-tag">LV. 1</span>
+        <div class="xp-strip-bar"><div class="xp-strip-fill" id="xp-strip-fill" style="width:0%"></div></div>
+        <span class="xp-strip-next" id="xp-strip-next">0 XP</span>
+      </div>
+
       <div class="status-row">
         <div class="dot ready" id="status-dot"></div>
         <span class="status-text" id="status-text">Ready — awaiting GPS</span>
+        <span class="xp-earning" id="xp-earning-indicator">+XP</span>
       </div>
 
       <div id="controls">
-        <button class="btn primary" id="btn-start" onclick="startRun()">Start Run</button>
+        <button class="btn primary idle-glow" id="btn-start" onclick="startRun()">Start Run</button>
         <button class="btn" id="btn-pause" onclick="pauseRun()" disabled>Pause</button>
         <button class="btn danger" id="btn-stop" onclick="stopRun()" disabled>Stop</button>
       </div>
 
-      <div id="route-info" id="route-info-text">No active route</div>
+      <div id="route-info">No active route</div>
     </div>
 
-    <!-- HISTORY TAB -->
+    <!-- HISTORY -->
     <div id="tab-history" class="tab-content">
       <div id="history-list">
         <div class="history-empty" id="history-empty">
           <span class="big-icon">◎</span>
-          No runs yet.<br>Start your first run<br>to see history here.
+          No runs yet.<br>Complete a run<br>to earn XP &amp; rewards.
         </div>
       </div>
       <div id="export-bar">
-        <button class="btn" onclick="exportAllCSV()" style="font-size:9px">Export All CSV</button>
-        <button class="btn" onclick="exportAllGPX()" style="font-size:9px">Export All GPX</button>
+        <button class="btn" onclick="exportAllCSV()" style="font-size:10px">Export CSV</button>
+        <button class="btn" onclick="exportAllGPX()" style="font-size:10px">Export GPX</button>
       </div>
     </div>
   </div>
@@ -587,284 +933,377 @@
   <div id="map-container">
     <div id="map"></div>
     <div id="map-overlay">
-      <div class="map-badge" id="map-badge-dist" style="display:none">
-        Distance<span id="mb-dist">0.00 km</span>
-      </div>
-      <div class="map-badge" id="map-badge-pace" style="display:none">
-        Pace<span id="mb-pace">--:--</span>
-      </div>
+      <div class="map-badge" id="map-badge-dist" style="display:none">Distance<span id="mb-dist">0.00 km</span></div>
+      <div class="map-badge" id="map-badge-pace" style="display:none">Pace<span id="mb-pace">--:--</span></div>
     </div>
   </div>
 </div>
 
-<!-- GPS Modal -->
+<!-- POST-RUN OVERLAY -->
+<div id="post-run-overlay">
+  <div class="post-run-inner">
+    <div class="sys-notification" id="sys-notif">
+      <div class="sys-tag">[ System ]</div>
+      <div class="sys-title" id="sys-title">Quest Complete</div>
+      <div class="sys-sub" id="sys-sub">Run recorded · All stats updated</div>
+    </div>
+
+    <div class="summary-stats" id="summary-stats">
+      <div class="sum-stat">
+        <div class="sum-label">Distance</div>
+        <div class="sum-val" id="sum-dist">0.00</div>
+        <div class="sum-unit">km</div>
+      </div>
+      <div class="sum-stat">
+        <div class="sum-label">Time</div>
+        <div class="sum-val" id="sum-time">00:00:00</div>
+      </div>
+      <div class="sum-stat">
+        <div class="sum-label">Pace</div>
+        <div class="sum-val" id="sum-pace">--:--</div>
+        <div class="sum-unit">min/km</div>
+      </div>
+    </div>
+
+    <div class="xp-gain-section" id="xp-gain-section">
+      <div class="xp-gain-header">
+        <div class="xp-gain-label">Experience Gained</div>
+        <div class="xp-gain-amount" id="xp-gain-amount">+0 XP</div>
+      </div>
+      <div class="xp-full-bar"><div class="xp-full-fill" id="xp-full-fill"></div></div>
+      <div class="xp-bar-labels">
+        <span id="xp-bar-current">0 XP</span>
+        <span id="xp-bar-next">100 XP to next level</span>
+      </div>
+    </div>
+
+    <div class="levelup-banner" id="levelup-banner">
+      <div class="levelup-tag">[ Level Up! ]</div>
+      <div class="levelup-num" id="levelup-num">LV. 2</div>
+      <div class="levelup-sub">New rank achieved</div>
+    </div>
+
+    <div class="stat-increases" id="stat-increases">
+      <div class="stat-inc-title">[ Stat Increases ]</div>
+      <div class="stat-row">
+        <div class="stat-row-label">Stamina</div>
+        <div class="stat-row-bar"><div class="stat-row-fill stamina" id="bar-stamina"></div></div>
+        <div class="stat-row-delta" id="delta-stamina">+0</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-row-label">Speed</div>
+        <div class="stat-row-bar"><div class="stat-row-fill speed" id="bar-speed"></div></div>
+        <div class="stat-row-delta" id="delta-speed">+0</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-row-label">Endurance</div>
+        <div class="stat-row-bar"><div class="stat-row-fill endurance" id="bar-endurance"></div></div>
+        <div class="stat-row-delta" id="delta-endurance">+0</div>
+      </div>
+    </div>
+
+    <div class="chest-section" id="chest-section">
+      <div class="chest-label">[ Run Rewards — Tap to Open ]</div>
+      <div class="chest-row" id="chest-row"></div>
+    </div>
+  </div>
+
+  <div id="post-run-dismiss">
+    <button class="btn primary" onclick="dismissPostRun()" style="width:100%;padding:15px;font-size:13px;letter-spacing:0.15em">
+      Continue →
+    </button>
+  </div>
+</div>
+
+<!-- REWARD POPUP -->
+<div id="reward-popup">
+  <div class="reward-box" id="reward-box">
+    <div class="reward-rarity" id="reward-rarity">Common</div>
+    <span class="reward-icon" id="reward-icon">📦</span>
+    <div class="reward-name" id="reward-name">Item</div>
+    <div class="reward-desc" id="reward-desc">A reward for your effort.</div>
+    <button class="btn primary" onclick="closeReward()" style="width:100%;padding:11px">Nice!</button>
+  </div>
+</div>
+
+<!-- GPS MODAL -->
 <div id="gps-modal">
   <div class="modal-box">
     <h3>GPS Required</h3>
-    <p>Stride needs location access to track your run. Please allow location permissions in your browser and try again.</p>
+    <p>Stride needs location access to track your run. Please allow location permissions and try again.</p>
     <button class="btn primary" onclick="document.getElementById('gps-modal').classList.remove('show')">Got it</button>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
-// ── STATE ──
-const state = {
-  running: false,
-  paused: false,
-  startTime: null,
-  pausedAt: null,
-  totalPausedMs: 0,
-  elapsed: 0,
-  coords: [],
-  distance: 0,
-  watchId: null,
-  timerInterval: null,
-  currentPos: null,
-  selectedRunId: null,
+// ══════════════════════════════
+// RPG SYSTEM
+// ══════════════════════════════
+const XP_PER_KM = 80, XP_PER_MIN = 5;
+
+function xpForLevel(lv) { return Math.floor(100 * Math.pow(lv, 1.4)); }
+
+function loadPlayer() {
+  try {
+    return JSON.parse(localStorage.getItem('stride_player') || 'null')
+      || { level:1, xp:0, totalXp:0, stamina:10, speed:10, endurance:10 };
+  } catch { return { level:1, xp:0, totalXp:0, stamina:10, speed:10, endurance:10 }; }
+}
+
+function savePlayer(p) { localStorage.setItem('stride_player', JSON.stringify(p)); }
+
+let player = loadPlayer();
+
+function updateHUD() {
+  const needed = xpForLevel(player.level);
+  const pct = Math.min(100, (player.xp / needed) * 100);
+  document.getElementById('hud-level').textContent = `LV. ${player.level}`;
+  document.getElementById('hud-xp-fill').style.width = pct + '%';
+  document.getElementById('hud-xp-label').textContent = `${player.xp} / ${needed} XP`;
+  document.getElementById('xp-lv-tag').textContent = `LV. ${player.level}`;
+  document.getElementById('xp-strip-fill').style.width = pct + '%';
+  document.getElementById('xp-strip-next').textContent = `${needed - player.xp} XP`;
+}
+
+const REWARDS = {
+  common: [
+    { icon:'🧢', name:"Runner's Cap", desc:"A simple cap for sunny runs.\nKeeps the glare away." },
+    { icon:'🎽', name:"Basic Tee", desc:"Breathable training shirt.\nYour first piece of gear." },
+    { icon:'💧', name:"Water Bottle", desc:"Stay hydrated, runner.\nEvery drop counts." },
+    { icon:'🩴', name:"Trail Sandals", desc:"Light footwear unlocked.\nFor casual weekend jogs." },
+  ],
+  rare: [
+    { icon:'🥽', name:"Sport Shades", desc:"Rare eyewear for focused runners.\nBlocks UV and excuses." },
+    { icon:'🎒', name:"Runner Pack", desc:"Rare carry rig for long hauls.\nHolds everything you need." },
+    { icon:'🦺', name:"Reflective Vest", desc:"Rare visibility gear.\nPerfect for night runs." },
+  ],
+  epic: [
+    { icon:'👑', name:"Champion Crown", desc:"Epic headwear. Few have earned this.\nWear it with pride." },
+    { icon:'⚡', name:"Speed Amulet", desc:"Epic talisman of velocity.\nYour pace is legend." },
+    { icon:'🛡️', name:"Iron Will Badge", desc:"Epic badge of resilience.\nConsistency is your superpower." },
+  ],
 };
 
-// ── MAP SETUP ──
-const map = L.map('map', { zoomControl: true, attributionControl: false }).setView([0, 0], 2);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+function pickReward(km) {
+  const r = Math.random();
+  let tier;
+  if (km >= 10) tier = r < 0.3 ? 'epic' : r < 0.7 ? 'rare' : 'common';
+  else if (km >= 5) tier = r < 0.12 ? 'epic' : r < 0.45 ? 'rare' : 'common';
+  else tier = r < 0.04 ? 'epic' : r < 0.22 ? 'rare' : 'common';
+  const pool = REWARDS[tier];
+  return { ...pool[Math.floor(Math.random() * pool.length)], tier };
+}
 
-let routeLine = L.polyline([], { color: '#c8f135', weight: 4, opacity: 0.9 }).addTo(map);
-let posMarker = null;
-let accuracyCircle = null;
-let historyLine = null;
-let startMarker = null, endMarker = null;
+function calcXP(km, sec) {
+  return Math.round(km * XP_PER_KM) + Math.round((sec / 60) * XP_PER_MIN);
+}
 
-// Fly to user's real location immediately on load
+// ══════════════════════════════
+// STATE
+// ══════════════════════════════
+const state = {
+  running:false, paused:false,
+  startTime:null, pausedAt:null,
+  totalPausedMs:0, elapsed:0,
+  coords:[], distance:0,
+  watchId:null, timerInterval:null,
+  selectedRunId:null,
+};
+
+// ══════════════════════════════
+// MAP
+// ══════════════════════════════
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([0,0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+
+let routeLine = L.polyline([], { color:'#a8ff3e', weight:4, opacity:0.9 }).addTo(map);
+let posMarker=null, accuracyCircle=null, historyLine=null, startMarker=null, endMarker=null;
+let idleMarker=null, idleCircle=null;
+
 navigator.geolocation?.getCurrentPosition(pos => {
   map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-  // Show a one-time "you are here" dot while idle
   updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-}, null, { enableHighAccuracy: true, timeout: 8000 });
+}, null, { enableHighAccuracy:true, timeout:8000 });
 
-let idleMarker = null, idleCircle = null;
-function updateIdleMarker(lat, lng, accuracy) {
-  if (state.running) return; // don't show idle marker while recording
+navigator.geolocation?.watchPosition(pos => {
+  if (!state.running) updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+}, null, { enableHighAccuracy:true, maximumAge:5000 });
+
+function updateIdleMarker(lat, lng, acc) {
+  if (state.running) return;
   if (!idleMarker) {
-    idleMarker = L.circleMarker([lat, lng], {
-      radius: 7, color: '#4a9eff', fillColor: '#4a9eff',
-      fillOpacity: 0.9, weight: 2
-    }).addTo(map).bindTooltip('You are here');
-    idleCircle = L.circle([lat, lng], {
-      radius: accuracy, color: '#4a9eff', fillColor: '#4a9eff',
-      fillOpacity: 0.08, weight: 1
-    }).addTo(map);
+    idleMarker = L.circleMarker([lat,lng], { radius:7, color:'#4a9eff', fillColor:'#4a9eff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('You are here');
+    idleCircle = L.circle([lat,lng], { radius:acc, color:'#4a9eff', fillColor:'#4a9eff', fillOpacity:0.07, weight:1 }).addTo(map);
   } else {
-    idleMarker.setLatLng([lat, lng]);
-    idleCircle.setLatLng([lat, lng]);
-    idleCircle.setRadius(accuracy);
+    idleMarker.setLatLng([lat,lng]);
+    idleCircle.setLatLng([lat,lng]);
+    idleCircle.setRadius(acc);
   }
 }
 
-// Keep idle marker updated even before a run starts
-let idleWatchId = navigator.geolocation?.watchPosition(pos => {
-  if (!state.running) updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-}, null, { enableHighAccuracy: true, maximumAge: 5000 });
-
-// ── INDEXEDDB ──
+// ══════════════════════════════
+// INDEXEDDB
+// ══════════════════════════════
 let db;
-const DB_NAME = 'stride_db', DB_VERSION = 1, STORE = 'runs';
-
 function openDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+  return new Promise((res,rej) => {
+    const req = indexedDB.open('stride_db', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('runs', { keyPath:'id', autoIncrement:true });
     req.onsuccess = e => { db = e.target.result; res(db); };
     req.onerror = () => rej(req.error);
   });
 }
 
 function saveRun(run) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    const req = tx.objectStore(STORE).add(run);
+  return new Promise((res,rej) => {
+    const req = db.transaction('runs','readwrite').objectStore('runs').add(run);
     req.onsuccess = () => res(req.result);
     req.onerror = () => rej(req.error);
   });
 }
 
 function getAllRuns() {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).getAll();
+  return new Promise((res,rej) => {
+    const req = db.transaction('runs','readonly').objectStore('runs').getAll();
     req.onsuccess = () => res(req.result.reverse());
     req.onerror = () => rej(req.error);
   });
 }
 
 function deleteRun(id) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    const req = tx.objectStore(STORE).delete(id);
+  return new Promise((res,rej) => {
+    const req = db.transaction('runs','readwrite').objectStore('runs').delete(id);
     req.onsuccess = () => res();
     req.onerror = () => rej(req.error);
   });
 }
 
-// ── TABS ──
+// ══════════════════════════════
+// TABS
+// ══════════════════════════════
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['record','history'][i] === tab));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['record','history'][i] === tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
   if (tab === 'history') loadHistory();
 }
 
-// ── GPS TRACKING ──
+// ══════════════════════════════
+// TRACKING
+// ══════════════════════════════
 function startRun() {
   if (!navigator.geolocation) { showToast('GPS not supported'); return; }
-
-  state.running = true;
-  state.paused = false;
-  state.startTime = Date.now();
-  state.totalPausedMs = 0;
-  state.coords = [];
-  state.distance = 0;
-  state.elapsed = 0;
-
-  // Hide idle marker when recording starts
-  if (idleMarker) { map.removeLayer(idleMarker); map.removeLayer(idleCircle); idleMarker = null; idleCircle = null; }
+  state.running=true; state.paused=false;
+  state.startTime=Date.now(); state.totalPausedMs=0;
+  state.coords=[]; state.distance=0; state.elapsed=0;
 
   routeLine.setLatLngs([]);
-  if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
-  if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
-  if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+  [historyLine,startMarker,endMarker].forEach(l => { if(l) { map.removeLayer(l); } });
+  historyLine=startMarker=endMarker=null;
+  if (idleMarker) { map.removeLayer(idleMarker); map.removeLayer(idleCircle); idleMarker=idleCircle=null; }
 
   document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-start').classList.remove('idle-glow');
   document.getElementById('btn-pause').disabled = false;
   document.getElementById('btn-stop').disabled = false;
+  document.getElementById('xp-strip-fill').classList.add('active');
+  document.getElementById('xp-earning-indicator').classList.add('visible');
+
   setStatus('recording', 'Recording…');
-
   state.timerInterval = setInterval(updateTimer, 1000);
-
-  state.watchId = navigator.geolocation.watchPosition(
-    onPosition,
-    onGPSError,
-    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
-  );
-
+  state.watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, { enableHighAccuracy:true, maximumAge:2000, timeout:10000 });
   showBadges(true);
 }
 
 function onPosition(pos) {
   if (!state.running || state.paused) return;
-  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-  state.currentPos = [lat, lng];
-
-  if (accuracy > 50) return; // ignore very inaccurate readings
+  const { latitude:lat, longitude:lng, accuracy } = pos.coords;
+  if (accuracy > 50) return;
 
   if (state.coords.length > 0) {
-    const last = state.coords[state.coords.length - 1];
+    const last = state.coords[state.coords.length-1];
     const d = haversine(last[0], last[1], lat, lng);
-    if (d > 0.003 && d < 0.3) { // min 3m, max 300m jump
-      state.distance += d;
-    }
+    if (d > 0.003 && d < 0.3) state.distance += d;
   }
 
   state.coords.push([lat, lng]);
   routeLine.setLatLngs(state.coords);
 
-  // Position marker + accuracy circle
   if (!posMarker) {
-    posMarker = L.circleMarker([lat, lng], {
-      radius: 9, color: '#c8f135', fillColor: '#c8f135',
-      fillOpacity: 1, weight: 3
-    }).addTo(map);
-    accuracyCircle = L.circle([lat, lng], {
-      radius: accuracy, color: '#c8f135', fillColor: '#c8f135',
-      fillOpacity: 0.07, weight: 1
-    }).addTo(map);
+    posMarker = L.circleMarker([lat,lng], { radius:9, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:3 }).addTo(map);
+    accuracyCircle = L.circle([lat,lng], { radius:accuracy, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:0.07, weight:1 }).addTo(map);
   } else {
-    posMarker.setLatLng([lat, lng]);
-    accuracyCircle.setLatLng([lat, lng]);
+    posMarker.setLatLng([lat,lng]);
+    accuracyCircle.setLatLng([lat,lng]);
     accuracyCircle.setRadius(accuracy);
   }
 
-  map.panTo([lat, lng], { animate: true, duration: 0.5 });
-
+  map.panTo([lat,lng], { animate:true, duration:0.5 });
   updateStats();
   document.getElementById('display-pts').textContent = state.coords.length;
-  document.getElementById('route-info').textContent =
-    `${state.coords.length} GPS points · accuracy ±${Math.round(accuracy)}m`;
+  document.getElementById('route-info').textContent = `${state.coords.length} GPS pts · ±${Math.round(accuracy)}m`;
 }
 
 function onGPSError(err) {
-  if (err.code === 1) {
-    document.getElementById('gps-modal').classList.add('show');
-    stopRun(true);
-  } else {
-    setStatus('paused', 'GPS signal lost…');
-  }
+  if (err.code === 1) { document.getElementById('gps-modal').classList.add('show'); stopRun(true); }
+  else setStatus('paused', 'GPS signal lost…');
 }
 
 function pauseRun() {
   if (state.paused) {
-    // Resume
-    state.paused = false;
+    state.paused=false;
     state.totalPausedMs += Date.now() - state.pausedAt;
     document.getElementById('btn-pause').textContent = 'Pause';
     setStatus('recording', 'Recording…');
+    document.getElementById('xp-earning-indicator').classList.add('visible');
   } else {
-    // Pause
-    state.paused = true;
-    state.pausedAt = Date.now();
+    state.paused=true; state.pausedAt=Date.now();
     document.getElementById('btn-pause').textContent = 'Resume';
     setStatus('paused', 'Paused');
+    document.getElementById('xp-earning-indicator').classList.remove('visible');
   }
 }
 
-function stopRun(silent = false) {
+function stopRun(silent=false) {
   if (!state.running && !silent) return;
-
   clearInterval(state.timerInterval);
   if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId);
 
-  const run = {
-    date: new Date().toISOString(),
-    duration: state.elapsed,
-    distance: state.distance,
-    coords: state.coords,
-  };
+  const run = { date:new Date().toISOString(), duration:state.elapsed, distance:state.distance, coords:state.coords };
 
-  state.running = false;
-  state.paused = false;
+  state.running=false; state.paused=false;
   document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-start').classList.add('idle-glow');
   document.getElementById('btn-pause').disabled = true;
   document.getElementById('btn-stop').disabled = true;
   document.getElementById('btn-pause').textContent = 'Pause';
+  document.getElementById('xp-strip-fill').classList.remove('active');
+  document.getElementById('xp-earning-indicator').classList.remove('visible');
+
   setStatus('ready', 'Ready — awaiting GPS');
   showBadges(false);
+  if (posMarker) { map.removeLayer(posMarker); posMarker=null; }
+  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle=null; }
 
   if (state.coords.length > 2 && !silent) {
-    saveRun(run).then(() => {
-      showToast('Run saved!');
-      renderEndMarkers();
-    });
+    saveRun(run).then(() => { renderEndMarkers(); triggerPostRun(run); });
   } else if (!silent) {
     showToast('Run too short to save');
     routeLine.setLatLngs([]);
   }
-
-  if (posMarker) { map.removeLayer(posMarker); posMarker = null; }
-  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
 }
 
 function renderEndMarkers() {
   if (state.coords.length < 2) return;
-  startMarker = L.circleMarker(state.coords[0], {
-    radius: 7, color: '#fff', fillColor: '#fff', fillOpacity: 0.9, weight: 2
-  }).addTo(map).bindTooltip('Start');
-  endMarker = L.circleMarker(state.coords[state.coords.length - 1], {
-    radius: 7, color: '#c8f135', fillColor: '#c8f135', fillOpacity: 1, weight: 2
-  }).addTo(map).bindTooltip('Finish');
+  startMarker = L.circleMarker(state.coords[0], { radius:7, color:'#fff', fillColor:'#fff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('Start');
+  endMarker = L.circleMarker(state.coords[state.coords.length-1], { radius:7, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:2 }).addTo(map).bindTooltip('Finish');
 }
 
-// ── TIMER ──
+// ══════════════════════════════
+// TIMER / STATS
+// ══════════════════════════════
 function updateTimer() {
   if (state.paused) return;
   state.elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedMs) / 1000);
@@ -875,7 +1314,6 @@ function updateTimer() {
 function updateStats() {
   const km = state.distance;
   document.getElementById('display-dist').textContent = km.toFixed(2);
-
   if (km > 0.05 && state.elapsed > 0) {
     const paceSec = state.elapsed / km;
     document.getElementById('display-pace').textContent = formatPace(paceSec);
@@ -885,35 +1323,152 @@ function updateStats() {
   }
 }
 
-// ── HISTORY ──
+// ══════════════════════════════
+// POST-RUN SEQUENCE
+// ══════════════════════════════
+function triggerPostRun(run) {
+  const xpEarned = calcXP(run.distance, run.duration);
+
+  player.xp += xpEarned;
+  player.totalXp += xpEarned;
+
+  let leveled = false;
+  while (player.xp >= xpForLevel(player.level)) {
+    player.xp -= xpForLevel(player.level);
+    player.level++;
+    leveled = true;
+  }
+
+  const stDelta = Math.max(1, Math.round(run.distance * 2));
+  const spDelta = Math.max(1, Math.round((run.distance / Math.max(0.01, run.duration / 3600)) * 0.3));
+  const enDelta = Math.max(1, Math.round(run.duration / 60));
+  player.stamina += stDelta;
+  player.speed += spDelta;
+  player.endurance += enDelta;
+  savePlayer(player);
+  updateHUD();
+
+  // Populate fields
+  document.getElementById('sum-dist').textContent = run.distance.toFixed(2);
+  document.getElementById('sum-time').textContent = formatDuration(run.duration);
+  document.getElementById('sum-pace').textContent = run.distance > 0.05 && run.duration > 0 ? formatPace(run.duration / run.distance) : '--:--';
+  document.getElementById('xp-gain-amount').textContent = `+${xpEarned} XP`;
+  document.getElementById('xp-bar-current').textContent = `${player.xp} XP`;
+  document.getElementById('xp-bar-next').textContent = `${xpForLevel(player.level) - player.xp} XP to next level`;
+  document.getElementById('delta-stamina').textContent = `+${stDelta}`;
+  document.getElementById('delta-speed').textContent = `+${spDelta}`;
+  document.getElementById('delta-endurance').textContent = `+${enDelta}`;
+
+  // Reset bars
+  ['bar-stamina','bar-speed','bar-endurance'].forEach(id => document.getElementById(id).style.width = '0%');
+  document.querySelectorAll('.stat-row-delta').forEach(d => d.classList.remove('show'));
+  document.getElementById('xp-full-fill').style.width = '0%';
+
+  if (leveled) {
+    document.getElementById('levelup-num').textContent = `LV. ${player.level}`;
+    document.getElementById('levelup-banner').classList.add('show');
+  } else {
+    document.getElementById('levelup-banner').classList.remove('show');
+  }
+
+  // Build chests
+  const chests = [{ tier:'common' }];
+  if (run.distance >= 3) chests.push({ tier:'rare' });
+  if (run.distance >= 7) chests.push({ tier:'epic' });
+
+  const chestIcons = { common:'📦', rare:'💙', epic:'💜' };
+  const chestRow = document.getElementById('chest-row');
+  chestRow.innerHTML = '';
+  chests.forEach(c => {
+    const el = document.createElement('div');
+    el.className = `chest ${c.tier}`;
+    el.innerHTML = `<div class="chest-lock">🔒</div><div class="chest-pixel">${chestIcons[c.tier]}</div><div class="chest-tier">${c.tier}</div>`;
+    el.onclick = () => {
+      if (el.classList.contains('opened')) return;
+      el.classList.add('opened');
+      const lock = el.querySelector('.chest-lock');
+      if (lock) lock.remove();
+      showRewardPopup(pickReward(run.distance));
+    };
+    chestRow.appendChild(el);
+  });
+
+  // Show overlay
+  const overlay = document.getElementById('post-run-overlay');
+  overlay.classList.add('show');
+  overlay.scrollTop = 0;
+
+  // Reset & stagger animations
+  ['sys-notif','summary-stats','xp-gain-section','stat-increases','chest-section','post-run-dismiss']
+    .forEach(id => document.getElementById(id).classList.remove('appear'));
+  document.getElementById('xp-gain-amount').classList.remove('pop');
+
+  setTimeout(() => document.getElementById('sys-notif').classList.add('appear'), 80);
+  setTimeout(() => document.getElementById('summary-stats').classList.add('appear'), 280);
+  setTimeout(() => {
+    document.getElementById('xp-gain-section').classList.add('appear');
+    document.getElementById('xp-gain-amount').classList.add('pop');
+    setTimeout(() => {
+      const needed = xpForLevel(player.level);
+      document.getElementById('xp-full-fill').style.width = Math.min(100, (player.xp / needed) * 100) + '%';
+    }, 200);
+  }, 480);
+  setTimeout(() => {
+    document.getElementById('stat-increases').classList.add('appear');
+    setTimeout(() => {
+      document.getElementById('bar-stamina').style.width = Math.min(100, player.stamina / 2) + '%';
+      document.getElementById('bar-speed').style.width = Math.min(100, player.speed / 2) + '%';
+      document.getElementById('bar-endurance').style.width = Math.min(100, player.endurance / 2) + '%';
+      document.querySelectorAll('.stat-row-delta').forEach(d => d.classList.add('show'));
+    }, 180);
+  }, 680);
+  setTimeout(() => document.getElementById('chest-section').classList.add('appear'), 980);
+  setTimeout(() => document.getElementById('post-run-dismiss').classList.add('appear'), 1750);
+}
+
+function showRewardPopup(reward) {
+  const box = document.getElementById('reward-box');
+  box.className = `reward-box ${reward.tier}`;
+  document.getElementById('reward-rarity').textContent = reward.tier.charAt(0).toUpperCase() + reward.tier.slice(1);
+  document.getElementById('reward-rarity').className = `reward-rarity ${reward.tier}`;
+  document.getElementById('reward-icon').textContent = reward.icon;
+  document.getElementById('reward-name').textContent = reward.name;
+  document.getElementById('reward-desc').textContent = reward.desc;
+  document.getElementById('reward-popup').classList.add('show');
+}
+
+function closeReward() { document.getElementById('reward-popup').classList.remove('show'); }
+
+function dismissPostRun() {
+  document.getElementById('post-run-overlay').classList.remove('show');
+}
+
+// ══════════════════════════════
+// HISTORY
+// ══════════════════════════════
 async function loadHistory() {
   const runs = await getAllRuns();
   const el = document.getElementById('history-list');
   const empty = document.getElementById('history-empty');
 
-  if (runs.length === 0) {
-    empty.style.display = 'block';
-    el.innerHTML = '';
-    el.appendChild(empty);
-    return;
-  }
+  if (!runs.length) { empty.style.display='block'; el.innerHTML=''; el.appendChild(empty); return; }
 
   el.innerHTML = '';
   runs.forEach(run => {
+    const xp = calcXP(run.distance, run.duration);
+    const pace = run.duration > 0 && run.distance > 0.05 ? formatPace(run.duration / run.distance) : '--:--';
     const card = document.createElement('div');
     card.className = 'run-card' + (run.id === state.selectedRunId ? ' selected' : '');
-    card.dataset.id = run.id;
-
-    const pace = run.duration > 0 && run.distance > 0.05
-      ? formatPace(run.duration / run.distance) : '--:--';
-
     card.innerHTML = `
-      <div class="run-card-date">${formatDate(run.date)}</div>
+      <div class="run-card-header">
+        <div class="run-card-date">${formatDate(run.date)}</div>
+        <div class="run-card-xp">+${xp} XP</div>
+      </div>
       <div class="run-card-metrics">
         <div>
           <div class="run-metric-label">Distance</div>
           <div class="run-metric-val">${run.distance.toFixed(2)}</div>
-          <div style="font-size:8px;color:var(--text-muted);letter-spacing:0.08em">km</div>
+          <div style="font-size:7px;color:var(--text-muted);letter-spacing:0.08em">km</div>
         </div>
         <div>
           <div class="run-metric-label">Time</div>
@@ -922,7 +1477,7 @@ async function loadHistory() {
         <div>
           <div class="run-metric-label">Pace</div>
           <div class="run-metric-val">${pace}</div>
-          <div style="font-size:8px;color:var(--text-muted);letter-spacing:0.08em">min/km</div>
+          <div style="font-size:7px;color:var(--text-muted);letter-spacing:0.08em">min/km</div>
         </div>
       </div>
       <div class="run-card-actions">
@@ -930,8 +1485,7 @@ async function loadHistory() {
         <button class="mini-btn" onclick="exportRunCSV(${run.id})">CSV</button>
         <button class="mini-btn" onclick="exportRunGPX(${run.id})">GPX</button>
         <button class="mini-btn del" onclick="confirmDelete(${run.id})">Delete</button>
-      </div>
-    `;
+      </div>`;
     el.appendChild(card);
   });
 }
@@ -940,25 +1494,15 @@ async function viewRun(id) {
   const runs = await getAllRuns();
   const run = runs.find(r => r.id === id);
   if (!run || !run.coords.length) return;
-
   state.selectedRunId = id;
   switchTab('record');
-
   if (historyLine) map.removeLayer(historyLine);
-  if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
-  if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
-
-  historyLine = L.polyline(run.coords, { color: '#c8f135', weight: 4, opacity: 0.85 }).addTo(map);
-  map.fitBounds(historyLine.getBounds(), { padding: [40, 40] });
-
-  startMarker = L.circleMarker(run.coords[0], {
-    radius: 7, color: '#fff', fillColor: '#fff', fillOpacity: 0.9, weight: 2
-  }).addTo(map).bindTooltip('Start');
-  endMarker = L.circleMarker(run.coords[run.coords.length - 1], {
-    radius: 7, color: '#c8f135', fillColor: '#c8f135', fillOpacity: 1, weight: 2
-  }).addTo(map).bindTooltip('Finish');
-
-  // Update display
+  if (startMarker) { map.removeLayer(startMarker); startMarker=null; }
+  if (endMarker) { map.removeLayer(endMarker); endMarker=null; }
+  historyLine = L.polyline(run.coords, { color:'#a8ff3e', weight:4, opacity:0.85 }).addTo(map);
+  map.fitBounds(historyLine.getBounds(), { padding:[40,40] });
+  startMarker = L.circleMarker(run.coords[0], { radius:7, color:'#fff', fillColor:'#fff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('Start');
+  endMarker = L.circleMarker(run.coords[run.coords.length-1], { radius:7, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:2 }).addTo(map).bindTooltip('Finish');
   document.getElementById('display-time').textContent = formatDuration(run.duration);
   document.getElementById('display-dist').textContent = run.distance.toFixed(2);
   if (run.distance > 0.05 && run.duration > 0) {
@@ -975,20 +1519,22 @@ async function confirmDelete(id) {
   showToast('Run deleted');
   loadHistory();
   if (state.selectedRunId === id) {
-    if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
-    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
-    if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+    if (historyLine) { map.removeLayer(historyLine); historyLine=null; }
+    if (startMarker) { map.removeLayer(startMarker); startMarker=null; }
+    if (endMarker) { map.removeLayer(endMarker); endMarker=null; }
     state.selectedRunId = null;
   }
 }
 
-// ── EXPORT ──
+// ══════════════════════════════
+// EXPORT
+// ══════════════════════════════
 async function exportRunCSV(id) {
   const runs = await getAllRuns();
   const run = runs.find(r => r.id === id);
   if (!run) return;
   const rows = [['lat','lng','point']];
-  run.coords.forEach((c, i) => rows.push([c[0], c[1], i + 1]));
+  run.coords.forEach((c,i) => rows.push([c[0],c[1],i+1]));
   downloadFile(rowsToCSV(rows), `stride_run_${id}.csv`, 'text/csv');
 }
 
@@ -1003,10 +1549,8 @@ async function exportAllCSV() {
   const runs = await getAllRuns();
   if (!runs.length) { showToast('No runs to export'); return; }
   const rows = [['id','date','duration_s','distance_km','pace_min_per_km']];
-  runs.forEach(r => rows.push([
-    r.id, r.date, r.duration, r.distance.toFixed(4),
-    r.duration && r.distance > 0 ? (r.duration / r.distance / 60).toFixed(4) : ''
-  ]));
+  runs.forEach(r => rows.push([r.id, r.date, r.duration, r.distance.toFixed(4),
+    r.duration && r.distance > 0 ? (r.duration/r.distance/60).toFixed(4) : '']));
   downloadFile(rowsToCSV(rows), 'stride_all_runs.csv', 'text/csv');
   showToast('CSV exported');
 }
@@ -1014,61 +1558,56 @@ async function exportAllCSV() {
 async function exportAllGPX() {
   const runs = await getAllRuns();
   if (!runs.length) { showToast('No runs to export'); return; }
-  let tracks = runs.map(r => toGPX(r, false)).join('\n');
-  const gpx = `<?xml version="1.0"?><gpx version="1.1" creator="Stride">${tracks}</gpx>`;
-  downloadFile(gpx, 'stride_all_runs.gpx', 'application/gpx+xml');
+  const tracks = runs.map(r => toGPX(r,false)).join('\n');
+  downloadFile(`<?xml version="1.0"?><gpx version="1.1" creator="Stride">${tracks}</gpx>`, 'stride_all_runs.gpx', 'application/gpx+xml');
   showToast('GPX exported');
 }
 
-function toGPX(run, wrap = true) {
-  const pts = run.coords.map(c =>
-    `<trkpt lat="${c[0]}" lon="${c[1]}"></trkpt>`
-  ).join('');
-  const trk = `<trk><name>Run ${run.id || ''} ${run.date}</name><trkseg>${pts}</trkseg></trk>`;
+function toGPX(run, wrap=true) {
+  const pts = run.coords.map(c => `<trkpt lat="${c[0]}" lon="${c[1]}"></trkpt>`).join('');
+  const trk = `<trk><n>Run ${run.id||''} ${run.date}</n><trkseg>${pts}</trkseg></trk>`;
   return wrap ? `<?xml version="1.0"?><gpx version="1.1" creator="Stride">${trk}</gpx>` : trk;
 }
 
-function rowsToCSV(rows) {
-  return rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-}
+function rowsToCSV(rows) { return rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n'); }
 
 function downloadFile(content, filename, mime) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-  a.download = filename;
-  a.click();
+  a.href = URL.createObjectURL(new Blob([content], { type:mime }));
+  a.download = filename; a.click();
 }
 
-// ── UTILS ──
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371, dLat = rad(lat2 - lat1), dLon = rad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+// ══════════════════════════════
+// UTILS
+// ══════════════════════════════
+function haversine(lat1,lon1,lat2,lon2) {
+  const R=6371, dLat=rad(lat2-lat1), dLon=rad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function rad(d) { return d * Math.PI / 180; }
+function rad(d) { return d*Math.PI/180; }
 
 function formatDuration(s) {
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
   return `${pad(h)}:${pad(m)}:${pad(sec)}`;
 }
 
-function formatPace(secPerKm) {
-  const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
+function formatPace(sPerKm) {
+  const m=Math.floor(sPerKm/60), s=Math.round(sPerKm%60);
   return `${m}:${pad(s)}`;
 }
 
 function formatDate(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-    + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const d=new Date(iso);
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})
+    +' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
 }
 
-function pad(n) { return String(n).padStart(2, '0'); }
+function pad(n) { return String(n).padStart(2,'0'); }
 
 function setStatus(type, text) {
-  const dot = document.getElementById('status-dot');
-  dot.className = 'dot ' + type;
+  document.getElementById('status-dot').className = 'dot '+type;
   document.getElementById('status-text').textContent = text;
 }
 
@@ -1080,19 +1619,20 @@ function showBadges(show) {
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+  t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── INIT ──
+// ══════════════════════════════
+// INIT
+// ══════════════════════════════
 openDB().then(() => {
+  updateHUD();
   getAllRuns().then(runs => {
-    if (runs.length > 0) {
+    if (runs.length > 0)
       document.getElementById('route-info').textContent =
-        `${runs.length} saved run${runs.length > 1 ? 's' : ''} — tap History to view`;
-    }
+        `${runs.length} run${runs.length>1?'s':''} logged · LV. ${player.level} · ${player.totalXp} total XP`;
   });
 });
 </script>
