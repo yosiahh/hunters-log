@@ -452,24 +452,62 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width: 700px) {
+    html, body { overflow: hidden; height: 100%; }
+
     #app {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
       overflow: hidden;
     }
 
-    #panel {
-      border-right: none;
-      border-bottom: 1px solid var(--border);
-      max-height: 55vh;
-    }
-
+    /* Map fills remaining space between header area and panel */
     #map-container {
-      height: 45vh;
+      flex: 1 1 0;
+      min-height: 0;
+      order: 2;
     }
 
-    #stat-time .stat-value { font-size: 36px; }
-    .stat-value { font-size: 20px; }
+    /* Panel pinned at bottom, fixed height */
+    #panel {
+      order: 3;
+      flex: 0 0 auto;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      max-height: 52vh;
+      overflow: hidden;
+    }
+
+    /* Shrink header */
+    #header { padding: 10px 16px; }
+    .logo-sub { display: none; }
+
+    /* Tabs */
+    .tab { padding: 9px; font-size: 9px; }
+
+    /* Stats grid — 4 columns, time spans full width */
+    #stats-grid { grid-template-columns: repeat(4, 1fr); }
+    #stat-time { grid-column: 1 / -1; }
+    #stat-time .stat-value { font-size: 28px; }
+    .stat-value { font-size: 18px; }
+    .stat-box { padding: 10px; }
+
+    /* Status */
+    .status-row { padding: 8px 14px; }
+
+    /* Controls — large tap targets */
+    #controls { padding: 10px 12px; }
+    .btn { padding: 16px 8px; font-size: 10px; }
+
+    /* Route info */
+    #route-info { padding: 6px 14px; font-size: 8px; }
+  }
+
+  @media (max-width: 380px) {
+    #stat-time .stat-value { font-size: 22px; }
+    .stat-value { font-size: 15px; }
+    .stat-box { padding: 8px; }
+    .btn { padding: 14px 4px; font-size: 9px; }
   }
 </style>
 </head>
