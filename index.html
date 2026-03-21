@@ -9,558 +9,341 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-/* ══════════════════════════════════════════
-   TOKENS
-══════════════════════════════════════════ */
 :root {
-  --bg: #080c0a;
-  --surface: #0e1410;
-  --surface2: #131a14;
-  --surface3: #182018;
-  --border: #1e2b1f;
-  --border2: #243026;
-  --accent: #a8ff3e;
-  --accent2: #7ee83a;
-  --accent-dim: rgba(168,255,62,0.10);
-  --accent-glow: rgba(168,255,62,0.25);
-  --text: #e8f5e0;
-  --text-muted: #445544;
-  --text-dim: #7a9a7a;
-  --red: #ff4455;
-  --gold: #ffd166;
-  --gold-dim: rgba(255,209,102,0.12);
-  --blue: #4fc3f7;
-  --blue-dim: rgba(79,195,247,0.12);
-  --purple: #b39ddb;
-  --purple-dim: rgba(179,157,219,0.12);
-  --font-display: 'Unbounded', sans-serif;
-  --font-ui: 'Rajdhani', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-  --r: 3px;
+  --bg:#080c0a; --surface:#0e1410; --surface2:#131a14;
+  --border:#1e2b1f; --border2:#243026;
+  --accent:#a8ff3e; --accent2:#7ee83a;
+  --accent-dim:rgba(168,255,62,0.10); --accent-glow:rgba(168,255,62,0.25);
+  --text:#e8f5e0; --text-muted:#445544; --text-dim:#7a9a7a;
+  --red:#ff4455; --gold:#ffd166; --blue:#4fc3f7; --purple:#b39ddb;
+  --font-display:'Unbounded',sans-serif;
+  --font-ui:'Rajdhani',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --r:3px;
 }
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-ui);overflow:hidden;-webkit-font-smoothing:antialiased;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:9999;}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-ui); overflow: hidden; -webkit-font-smoothing: antialiased; }
+/* LAYOUT */
+#app{display:grid;grid-template-columns:360px 1fr;height:100vh;}
 
-body::after {
-  content: ''; position: fixed; inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
-  pointer-events: none; z-index: 9999;
+/* PANEL */
+#panel{background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;z-index:10;position:relative;}
+#panel::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:linear-gradient(to bottom,transparent,var(--accent-glow),transparent);pointer-events:none;}
+
+/* HEADER */
+#header{padding:13px 16px 11px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:0.3em;color:var(--accent);text-transform:uppercase;text-shadow:0 0 12px var(--accent-glow);}
+.logo-sub{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.12em;margin-top:2px;}
+.player-hud{display:flex;flex-direction:column;align-items:flex-end;gap:3px;cursor:pointer;}
+.player-level{font-family:var(--font-display);font-size:9px;font-weight:700;color:var(--accent);letter-spacing:0.1em;text-shadow:0 0 8px var(--accent-glow);}
+.xp-bar-mini{width:76px;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);}
+.xp-label{font-family:var(--font-mono);font-size:7px;color:var(--text-muted);letter-spacing:0.07em;}
+
+/* TABS */
+#tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{flex:1;padding:10px 6px;font-family:var(--font-ui);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:none;border:none;color:var(--text-muted);cursor:pointer;transition:color 0.2s,background 0.2s;position:relative;}
+.tab.active{color:var(--accent);background:var(--accent-dim);}
+.tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow);}
+.tab:hover:not(.active){color:var(--text-dim);}
+.tab-content{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.tab-content.active{display:flex;}
+
+/* STATS GRID */
+#stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;}
+.stat-box{background:var(--bg);padding:13px;position:relative;overflow:hidden;}
+.stat-box::before{content:'';position:absolute;top:4px;left:4px;width:7px;height:7px;border-top:1px solid var(--border2);border-left:1px solid var(--border2);pointer-events:none;}
+.stat-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px;}
+.stat-value{font-family:var(--font-display);font-size:23px;font-weight:300;color:var(--text);letter-spacing:-0.02em;line-height:1;}
+.stat-unit{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);margin-top:2px;}
+#stat-time{grid-column:1/-1;background:var(--surface);padding:11px 13px;}
+#stat-time .stat-value{font-size:42px;letter-spacing:-0.04em;}
+
+/* XP STRIP */
+#xp-strip{flex-shrink:0;padding:6px 13px 5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;background:var(--surface);}
+.xp-strip-label{font-family:var(--font-mono);font-size:7px;color:var(--text-muted);letter-spacing:0.12em;white-space:nowrap;min-width:34px;}
+.xp-strip-bar{flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden;position:relative;}
+.xp-strip-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width 0.8s ease;box-shadow:0 0 6px var(--accent-glow);}
+.xp-strip-fill.active::after{content:'';position:absolute;top:0;left:-50px;width:30px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent);animation:shimmer 2s infinite;}
+@keyframes shimmer{0%{left:-50px;}100%{left:100%;}}
+.xp-strip-next{font-family:var(--font-mono);font-size:7px;color:var(--text-muted);letter-spacing:0.07em;white-space:nowrap;}
+
+/* STATUS */
+.status-row{padding:7px 13px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);transition:background 0.3s;flex-shrink:0;}
+.dot.ready{background:var(--text-muted);}
+.dot.recording{background:var(--accent);animation:dotpulse 1.4s ease-in-out infinite;box-shadow:0 0 5px var(--accent);}
+.dot.paused{background:var(--gold);}
+.dot.no-gps{background:var(--red);}
+@keyframes dotpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+.status-text{font-family:var(--font-mono);font-size:8px;letter-spacing:0.12em;color:var(--text-dim);text-transform:uppercase;flex:1;}
+.xp-earning{font-family:var(--font-mono);font-size:8px;color:var(--accent);letter-spacing:0.07em;opacity:0;transition:opacity 0.3s;}
+.xp-earning.visible{opacity:1;}
+
+/* CONTROLS */
+#controls{padding:10px 11px;display:flex;gap:7px;flex-shrink:0;border-bottom:1px solid var(--border);}
+.btn{flex:1;padding:12px 7px;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.13em;text-transform:uppercase;border:1px solid var(--border2);background:var(--surface);color:var(--text-muted);cursor:pointer;border-radius:var(--r);transition:all 0.15s;}
+.btn:hover{border-color:var(--text-dim);color:var(--text);}
+.btn.primary{background:var(--accent);color:#050905;border-color:var(--accent);font-weight:700;box-shadow:0 0 14px var(--accent-glow),0 2px 6px rgba(0,0,0,0.4);}
+.btn.primary:hover{background:#b5ff4a;box-shadow:0 0 22px var(--accent-glow),0 2px 10px rgba(0,0,0,0.4);}
+.btn.primary.idle-glow{animation:startglow 2.5s ease-in-out infinite;}
+@keyframes startglow{0%,100%{box-shadow:0 0 14px var(--accent-glow),0 2px 6px rgba(0,0,0,0.4);}50%{box-shadow:0 0 28px rgba(168,255,62,0.45),0 2px 10px rgba(0,0,0,0.4);}}
+.btn.danger{border-color:var(--border);color:var(--text-muted);}
+.btn.danger:hover{border-color:var(--red);color:var(--red);}
+.btn:disabled{opacity:0.25;cursor:not-allowed;pointer-events:none;}
+#route-info{padding:6px 13px;font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.1em;border-bottom:1px solid var(--border);flex-shrink:0;}
+
+/* HISTORY */
+#history-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.history-empty{padding:36px 20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;line-height:2;}
+.history-empty .big-icon{font-size:28px;display:block;margin-bottom:12px;opacity:0.2;}
+.run-card{padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;}
+.run-card:hover{background:var(--surface);}
+.run-card.selected{background:var(--accent-dim);border-left:2px solid var(--accent);}
+.run-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.run-card-date{font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;}
+.run-card-xp{font-family:var(--font-mono);font-size:8px;color:var(--accent);letter-spacing:0.07em;}
+.run-card-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:8px;}
+.run-metric-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;}
+.run-metric-val{font-family:var(--font-display);font-size:14px;font-weight:300;color:var(--text);letter-spacing:-0.02em;}
+.run-card-actions{display:flex;gap:5px;}
+.mini-btn{padding:4px 8px;font-family:var(--font-ui);font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface2);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;}
+.mini-btn:hover{border-color:var(--accent);color:var(--accent);}
+.mini-btn.del:hover{border-color:var(--red);color:var(--red);}
+#export-bar{padding:9px 11px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:7px;}
+
+/* PROFILE TAB */
+#tab-profile-inner{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent;padding:16px 16px 32px;}
+.profile-avatar-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;}
+.avatar-frame{width:90px;height:90px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:52px;margin-bottom:12px;position:relative;box-shadow:0 0 18px rgba(0,0,0,0.4);}
+.avatar-badges{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;}
+.equip-badge{background:var(--surface);border:1px solid var(--border2);border-radius:2px;padding:2px 5px;font-size:10px;line-height:1;}
+.name-row{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+#player-name-input{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text);background:none;border:none;border-bottom:1px solid var(--border2);text-align:center;letter-spacing:0.04em;padding:2px 5px;width:160px;transition:border-color 0.2s;}
+#player-name-input:focus{outline:none;border-bottom-color:var(--accent);}
+.edit-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:3px;}
+.edit-btn:hover{color:var(--accent);}
+.lv-xp-row{display:flex;align-items:center;gap:9px;width:100%;max-width:240px;margin-bottom:4px;}
+.profile-lv{font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--accent);text-shadow:0 0 8px var(--accent-glow);white-space:nowrap;}
+.profile-xp-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.profile-xp-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);}
+.profile-xp-text{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.07em;}
+.section-title{font-family:var(--font-mono);font-size:7px;letter-spacing:0.22em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;margin-top:20px;}
+.pstat-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.pstat-label{font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;}
+.pstat-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.pstat-fill{height:100%;border-radius:2px;transition:width 0.8s ease;}
+.pstat-fill.stamina{background:linear-gradient(90deg,#4fc3f7,#81d4fa);box-shadow:0 0 5px rgba(79,195,247,0.3);}
+.pstat-fill.speed{background:linear-gradient(90deg,var(--accent2),var(--accent));box-shadow:0 0 5px var(--accent-glow);}
+.pstat-fill.endurance{background:linear-gradient(90deg,#b39ddb,#ce93d8);box-shadow:0 0 5px rgba(179,157,219,0.3);}
+.pstat-val{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;}
+.totals-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-top:4px;}
+.total-box{background:var(--surface);padding:11px 8px;text-align:center;}
+.total-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+.total-val{font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);}
+.profile-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;}
+.pnav-btn{padding:14px 10px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.pnav-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.pnav-icon{font-size:20px;}
+
+/* MAP */
+#map-container{position:relative;background:#060a07;}
+#map{width:100%;height:100%;}
+.leaflet-tile{filter:brightness(0.55) saturate(0.5) contrast(1.1);}
+.leaflet-container{background:#060a07;}
+.leaflet-control-zoom a{background:var(--surface)!important;color:var(--text-dim)!important;border-color:var(--border)!important;font-family:var(--font-mono)!important;}
+#map-overlay{position:absolute;top:12px;right:12px;z-index:500;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+.map-badge{background:rgba(8,12,10,0.93);border:1px solid var(--border2);padding:6px 10px;font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;backdrop-filter:blur(8px);border-radius:var(--r);}
+.map-badge span{color:var(--accent);font-family:var(--font-display);font-size:13px;display:block;margin-top:2px;}
+
+/* POST-RUN */
+#post-run-overlay{display:none;position:fixed;inset:0;background:rgba(5,8,6,0.97);z-index:2000;flex-direction:column;align-items:center;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#post-run-overlay.show{display:flex;}
+.pr-inner{width:100%;max-width:440px;padding:26px 20px 8px;display:flex;flex-direction:column;align-items:stretch;}
+.sys-notif{background:linear-gradient(135deg,rgba(168,255,62,0.07),rgba(168,255,62,0.02));border:1px solid rgba(168,255,62,0.5);border-radius:var(--r);padding:13px 17px;text-align:center;margin-bottom:18px;opacity:0;transform:translateY(-8px);}
+.sys-notif.appear{animation:sysappear 0.5s cubic-bezier(0.2,0.8,0.3,1) forwards;}
+@keyframes sysappear{to{opacity:1;transform:translateY(0);}}
+.sys-tag{font-family:var(--font-mono);font-size:7px;letter-spacing:0.25em;color:var(--accent);text-transform:uppercase;margin-bottom:4px;}
+.sys-title{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);letter-spacing:0.04em;margin-bottom:3px;}
+.sys-sub{font-family:var(--font-mono);font-size:8px;color:var(--text-dim);letter-spacing:0.1em;}
+.sum-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-bottom:18px;opacity:0;}
+.sum-stats.appear{animation:fadeup 0.4s 0.3s ease forwards;}
+@keyframes fadeup{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+.sum-stat{background:var(--surface);padding:12px 10px;text-align:center;}
+.sum-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;}
+.sum-val{font-family:var(--font-display);font-size:21px;font-weight:300;color:var(--text);letter-spacing:-0.02em;}
+.sum-unit{font-family:var(--font-mono);font-size:7px;color:var(--text-muted);margin-top:2px;}
+.xp-section{margin-bottom:16px;opacity:0;}
+.xp-section.appear{animation:fadeup 0.4s 0.5s ease forwards;}
+.xp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.xp-label-text{font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.13em;color:var(--text-dim);text-transform:uppercase;}
+.xp-amount{font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--accent);text-shadow:0 0 10px var(--accent-glow);opacity:0;}
+.xp-amount.pop{animation:xppop 0.5s 0.8s cubic-bezier(0.2,0.8,0.3,1.2) forwards;}
+@keyframes xppop{0%{opacity:0;transform:scale(0.6);}70%{transform:scale(1.12);}100%{opacity:1;transform:scale(1);}}
+.xp-bar-full{height:8px;background:var(--border2);border-radius:5px;overflow:hidden;margin-bottom:4px;position:relative;}
+.xp-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:5px;width:0%;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 9px var(--accent-glow);}
+.xp-bar-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:7px;color:var(--text-muted);letter-spacing:0.07em;}
+.stat-inc{margin-bottom:16px;opacity:0;}
+.stat-inc.appear{animation:fadeup 0.4s 0.7s ease forwards;}
+.stat-inc-title{font-family:var(--font-mono);font-size:7px;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:9px;}
+.si-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.si-label{font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:74px;}
+.si-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;}
+.si-fill{height:100%;border-radius:2px;width:0%;transition:width 1s ease;}
+.si-fill.stamina{background:linear-gradient(90deg,#4fc3f7,#81d4fa);box-shadow:0 0 5px rgba(79,195,247,0.4);}
+.si-fill.speed{background:linear-gradient(90deg,var(--accent2),var(--accent));box-shadow:0 0 5px var(--accent-glow);}
+.si-fill.endurance{background:linear-gradient(90deg,#b39ddb,#ce93d8);box-shadow:0 0 5px rgba(179,157,219,0.4);}
+.si-delta{font-family:var(--font-mono);font-size:8px;color:var(--accent);min-width:28px;text-align:right;opacity:0;transition:opacity 0.3s 1.2s;}
+.si-delta.show{opacity:1;}
+.levelup{display:none;text-align:center;margin-bottom:16px;padding:14px;background:linear-gradient(135deg,rgba(255,209,102,0.08),rgba(255,209,102,0.03));border:1px solid var(--gold);border-radius:var(--r);}
+.levelup.show{display:block;animation:levelbang 0.6s 1.5s cubic-bezier(0.2,0.8,0.3,1.3) both;}
+@keyframes levelbang{0%{opacity:0;transform:scale(0.82);}60%{transform:scale(1.04);}100%{opacity:1;transform:scale(1);}}
+.lu-tag{font-family:var(--font-mono);font-size:7px;letter-spacing:0.25em;color:var(--gold);text-transform:uppercase;margin-bottom:4px;}
+.lu-num{font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--gold);text-shadow:0 0 18px rgba(255,209,102,0.5);line-height:1;}
+.lu-sub{font-family:var(--font-ui);font-size:11px;color:var(--text-dim);letter-spacing:0.1em;margin-top:3px;}
+.chest-section{text-align:center;margin-bottom:20px;opacity:0;}
+.chest-section.appear{animation:fadeup 0.4s 1.1s ease forwards;}
+.chest-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:11px;}
+.chest-row{display:flex;justify-content:center;gap:11px;}
+.chest{width:74px;height:74px;cursor:pointer;position:relative;border:1px solid var(--border2);border-radius:4px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform 0.15s,border-color 0.2s,box-shadow 0.2s;}
+.chest:hover{transform:translateY(-2px);}
+.chest.common:hover{border-color:var(--text-dim);}
+.chest.rare{border-color:rgba(79,195,247,0.35);}
+.chest.rare:hover{border-color:var(--blue);box-shadow:0 4px 18px rgba(79,195,247,0.2);}
+.chest.epic{border-color:rgba(179,157,219,0.35);}
+.chest.epic:hover{border-color:var(--purple);box-shadow:0 4px 18px rgba(179,157,219,0.2);}
+.chest.opened{opacity:0.35;cursor:default;transform:none!important;}
+.chest-pixel{font-size:28px;line-height:1;}
+.chest-tier{font-family:var(--font-mono);font-size:7px;letter-spacing:0.1em;text-transform:uppercase;}
+.chest.common .chest-tier{color:var(--text-muted);}
+.chest.rare .chest-tier{color:var(--blue);}
+.chest.epic .chest-tier{color:var(--purple);}
+.chest-lock{position:absolute;top:4px;right:4px;font-size:8px;opacity:0.35;}
+#pr-dismiss{width:100%;max-width:440px;padding:0 20px 32px;opacity:0;}
+#pr-dismiss.appear{animation:fadeup 0.4s 1.8s ease forwards;}
+
+/* REWARD POPUP */
+#reward-popup{display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(5,8,6,0.87);backdrop-filter:blur(5px);}
+#reward-popup.show{display:flex;}
+.reward-box{background:var(--surface);border:1px solid var(--border2);padding:28px 24px;text-align:center;border-radius:4px;max-width:250px;width:90%;animation:rewardpop 0.4s cubic-bezier(0.2,0.8,0.3,1.3);}
+@keyframes rewardpop{from{opacity:0;transform:scale(0.72) translateY(16px);}to{opacity:1;transform:none;}}
+.reward-box.rare{border-color:var(--blue);box-shadow:0 0 36px rgba(79,195,247,0.12);}
+.reward-box.epic{border-color:var(--purple);box-shadow:0 0 36px rgba(179,157,219,0.12);}
+.rarity-tag{font-family:var(--font-mono);font-size:7px;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:10px;}
+.rarity-tag.common{color:var(--text-muted);}
+.rarity-tag.rare{color:var(--blue);}
+.rarity-tag.epic{color:var(--purple);}
+.reward-icon{font-size:48px;margin-bottom:8px;display:block;}
+.reward-name{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em;margin-bottom:5px;}
+.reward-desc{font-family:var(--font-mono);font-size:8px;color:var(--text-dim);letter-spacing:0.05em;line-height:1.7;margin-bottom:15px;white-space:pre-line;}
+
+/* INVENTORY SCREEN */
+#inventory-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:1600;flex-direction:column;overflow:hidden;}
+#inventory-screen.show{display:flex;}
+.screen-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg);}
+.screen-title{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:0.25em;color:var(--accent);text-transform:uppercase;text-shadow:0 0 10px var(--accent-glow);}
+.screen-close{background:none;border:1px solid var(--border2);color:var(--text-dim);font-family:var(--font-mono);font-size:10px;padding:6px 12px;cursor:pointer;border-radius:var(--r);transition:all 0.15s;letter-spacing:0.1em;}
+.screen-close:hover{border-color:var(--text-dim);color:var(--text);}
+.inv-body{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch;}
+.inv-section-title{font-family:var(--font-mono);font-size:7px;letter-spacing:0.22em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+.equip-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.equip-slot{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:10px 8px;text-align:center;min-height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all 0.15s;}
+.equip-slot:hover{border-color:var(--text-muted);}
+.equip-slot.filled{border-color:rgba(168,255,62,0.3);}
+.equip-slot-icon{font-size:24px;line-height:1;}
+.equip-slot-label{font-family:var(--font-mono);font-size:7px;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;}
+.equip-slot-name{font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:0.05em;}
+.inv-filter-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;}
+.inv-filter-btn{padding:5px 10px;font-family:var(--font-mono);font-size:8px;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-muted);cursor:pointer;border-radius:var(--r);white-space:nowrap;transition:all 0.15s;}
+.inv-filter-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.inv-item{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;}
+.inv-item:hover{border-color:var(--text-muted);transform:translateY(-1px);}
+.inv-item.equipped{border-color:var(--accent);box-shadow:0 0 8px var(--accent-dim);}
+.inv-item.rarity-rare{border-color:rgba(79,195,247,0.3);}
+.inv-item.rarity-epic{border-color:rgba(179,157,219,0.3);}
+.inv-item-icon{font-size:24px;line-height:1;}
+.inv-item-name{font-family:var(--font-ui);font-size:8px;font-weight:600;letter-spacing:0.05em;color:var(--text-dim);text-align:center;line-height:1.2;}
+.inv-rarity-dot{width:4px;height:4px;border-radius:50%;}
+.inv-rarity-dot.common{background:var(--text-muted);}
+.inv-rarity-dot.rare{background:var(--blue);box-shadow:0 0 4px rgba(79,195,247,0.5);}
+.inv-rarity-dot.epic{background:var(--purple);box-shadow:0 0 4px rgba(179,157,219,0.5);}
+.inv-equipped-tag{position:absolute;top:3px;right:3px;font-size:7px;color:var(--accent);font-family:var(--font-mono);}
+.inv-empty{padding:36px 20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;line-height:2;grid-column:1/-1;}
+.inv-empty-icon{font-size:26px;display:block;margin-bottom:12px;opacity:0.2;}
+
+/* ITEM DETAIL */
+#item-detail{display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(5,8,6,0.9);backdrop-filter:blur(5px);}
+#item-detail.show{display:flex;}
+.item-detail-box{background:var(--surface);padding:26px 22px;border-radius:4px;max-width:260px;width:90%;text-align:center;animation:rewardpop 0.3s cubic-bezier(0.2,0.8,0.3,1.3);}
+.item-detail-box.common{border:1px solid var(--border2);}
+.item-detail-box.rare{border:1px solid var(--blue);box-shadow:0 0 30px rgba(79,195,247,0.1);}
+.item-detail-box.epic{border:1px solid var(--purple);box-shadow:0 0 30px rgba(179,157,219,0.1);}
+.item-detail-rarity{font-family:var(--font-mono);font-size:7px;letter-spacing:0.25em;text-transform:uppercase;margin-bottom:12px;}
+.item-detail-rarity.common{color:var(--text-muted);}
+.item-detail-rarity.rare{color:var(--blue);}
+.item-detail-rarity.epic{color:var(--purple);}
+.item-detail-icon{font-size:52px;display:block;margin-bottom:10px;}
+.item-detail-name{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em;margin-bottom:4px;}
+.item-detail-slot{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.12em;margin-bottom:8px;text-transform:uppercase;}
+.item-detail-desc{font-family:var(--font-mono);font-size:8px;color:var(--text-dim);letter-spacing:0.05em;line-height:1.7;margin-bottom:16px;white-space:pre-line;}
+.item-detail-actions{display:flex;gap:8px;}
+
+/* GPS MODAL / TOAST */
+#gps-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;align-items:center;justify-content:center;}
+#gps-modal.show{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border2);padding:26px;max-width:280px;text-align:center;}
+.modal-box h3{font-family:var(--font-display);font-size:11px;letter-spacing:0.1em;color:var(--accent);margin-bottom:10px;text-transform:uppercase;}
+.modal-box p{font-family:var(--font-mono);font-size:9px;line-height:1.7;color:var(--text-dim);letter-spacing:0.05em;margin-bottom:16px;}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--surface2);border:1px solid var(--border2);padding:7px 14px;font-family:var(--font-mono);font-size:8px;letter-spacing:0.12em;color:var(--text-dim);opacity:0;transition:all 0.3s;z-index:9998;border-radius:var(--r);white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* MOBILE */
+@media(max-width:700px){
+  html,body{overflow:hidden;height:100%;}
+  #app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+  #map-container{flex:1 1 0;min-height:0;order:2;}
+  #panel{order:3;flex:0 0 auto;border-right:none;border-top:1px solid var(--border);max-height:54vh;overflow:hidden;}
+  #header{padding:7px 11px;}
+  .logo-sub{display:none;}
+  .tab{padding:8px 4px;font-size:9px;}
+  #stats-grid{grid-template-columns:repeat(4,1fr);}
+  #stat-time{grid-column:1/-1;}
+  #stat-time .stat-value{font-size:24px;}
+  .stat-value{font-size:15px;}
+  .stat-box{padding:8px 9px;}
+  .stat-box::before{display:none;}
+  #xp-strip{padding:5px 10px;}
+  .status-row{padding:6px 10px;}
+  #controls{padding:8px 9px;gap:6px;}
+  .btn{padding:14px 6px;font-size:11px;}
+  #route-info{padding:5px 10px;}
+  .inv-grid{grid-template-columns:repeat(4,1fr);}
 }
-
-/* ══════════════════════════════════════════
-   MAIN LAYOUT
-══════════════════════════════════════════ */
-#app {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  grid-template-rows: 100vh;
-  height: 100vh;
-}
-
-/* ══════════════════════════════════════════
-   LEFT PANEL
-══════════════════════════════════════════ */
-#panel {
-  background: var(--bg);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  overflow: hidden; z-index: 10; position: relative;
-}
-
-#panel::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px;
-  background: linear-gradient(to bottom, transparent, var(--accent-glow), transparent);
-  pointer-events: none;
-}
-
-/* ── HEADER ── */
-#header {
-  padding: 13px 16px 11px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
-}
-
-.logo { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; text-shadow: 0 0 12px var(--accent-glow); }
-.logo-sub { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.12em; margin-top: 2px; }
-
-.player-hud { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.player-level { font-family: var(--font-display); font-size: 9px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; text-shadow: 0 0 8px var(--accent-glow); cursor: pointer; }
-.player-level:hover { text-decoration: underline; text-underline-offset: 3px; }
-.xp-bar-mini { width: 76px; height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
-.xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 2px; transition: width 0.8s ease; box-shadow: 0 0 5px var(--accent-glow); }
-.xp-label { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); letter-spacing: 0.07em; }
-
-/* ── TABS ── */
-#tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-
-.tab {
-  flex: 1; padding: 10px 6px;
-  font-family: var(--font-ui); font-size: 10px; font-weight: 600;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  background: none; border: none; color: var(--text-muted);
-  cursor: pointer; transition: color 0.2s, background 0.2s; position: relative;
-}
-
-.tab.active { color: var(--accent); background: var(--accent-dim); }
-.tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
-.tab:hover:not(.active) { color: var(--text-dim); }
-
-.tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-.tab-content.active { display: flex; }
-
-/* ── STATS GRID ── */
-#stats-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-
-.stat-box { background: var(--bg); padding: 13px 13px; position: relative; overflow: hidden; }
-.stat-box::before { content: ''; position: absolute; top: 4px; left: 4px; width: 7px; height: 7px; border-top: 1px solid var(--border2); border-left: 1px solid var(--border2); pointer-events: none; }
-.stat-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px; }
-.stat-value { font-family: var(--font-display); font-size: 23px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
-.stat-unit { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); margin-top: 2px; }
-
-#stat-time { grid-column: 1 / -1; background: var(--surface); padding: 11px 13px; }
-#stat-time .stat-value { font-size: 42px; letter-spacing: -0.04em; }
-
-/* ── XP STRIP ── */
-#xp-strip {
-  flex-shrink: 0; padding: 6px 13px 5px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 9px; background: var(--surface);
-}
-
-.xp-strip-label { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); letter-spacing: 0.12em; white-space: nowrap; min-width: 34px; }
-.xp-strip-bar { flex: 1; height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; position: relative; }
-.xp-strip-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 2px; transition: width 0.8s ease; box-shadow: 0 0 6px var(--accent-glow); }
-.xp-strip-fill.active::after { content: ''; position: absolute; top: 0; left: -50px; width: 30px; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); animation: shimmer 2s infinite; }
-@keyframes shimmer { 0% { left: -50px; } 100% { left: 100%; } }
-.xp-strip-next { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); letter-spacing: 0.07em; white-space: nowrap; }
-
-/* ── STATUS ── */
-.status-row { padding: 7px 13px; display: flex; align-items: center; gap: 7px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; flex-shrink: 0; }
-.dot.ready { background: var(--text-muted); }
-.dot.recording { background: var(--accent); animation: dotpulse 1.4s ease-in-out infinite; box-shadow: 0 0 5px var(--accent); }
-.dot.paused { background: var(--gold); }
-.dot.no-gps { background: var(--red); }
-@keyframes dotpulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.7); } }
-.status-text { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase; flex: 1; }
-.xp-earning { font-family: var(--font-mono); font-size: 8px; color: var(--accent); letter-spacing: 0.07em; opacity: 0; transition: opacity 0.3s; }
-.xp-earning.visible { opacity: 1; }
-
-/* ── CONTROLS ── */
-#controls { padding: 10px 11px; display: flex; gap: 7px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
-
-.btn {
-  flex: 1; padding: 12px 7px;
-  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.13em; text-transform: uppercase;
-  border: 1px solid var(--border2); background: var(--surface); color: var(--text-muted);
-  cursor: pointer; border-radius: var(--r); transition: all 0.15s;
-}
-.btn:hover { border-color: var(--text-dim); color: var(--text); }
-.btn.primary { background: var(--accent); color: #050905; border-color: var(--accent); font-weight: 700; box-shadow: 0 0 14px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.4); }
-.btn.primary:hover { background: #b5ff4a; box-shadow: 0 0 22px var(--accent-glow), 0 2px 10px rgba(0,0,0,0.4); }
-.btn.primary.idle-glow { animation: startglow 2.5s ease-in-out infinite; }
-@keyframes startglow { 0%,100% { box-shadow: 0 0 14px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.4); } 50% { box-shadow: 0 0 28px rgba(168,255,62,0.45), 0 2px 10px rgba(0,0,0,0.4); } }
-.btn.danger { border-color: var(--border); color: var(--text-muted); }
-.btn.danger:hover { border-color: var(--red); color: var(--red); }
-.btn:disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
-
-#route-info { padding: 6px 13px; font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.1em; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-
-/* ── HISTORY TAB ── */
-#history-list { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-.history-empty { padding: 36px 20px; text-align: center; color: var(--text-muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; line-height: 2; }
-.history-empty .big-icon { font-size: 28px; display: block; margin-bottom: 12px; opacity: 0.2; }
-
-.run-card { padding: 11px 13px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
-.run-card:hover { background: var(--surface); }
-.run-card.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); }
-.run-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.run-card-date { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; }
-.run-card-xp { font-family: var(--font-mono); font-size: 8px; color: var(--accent); letter-spacing: 0.07em; }
-.run-card-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 8px; }
-.run-metric-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
-.run-metric-val { font-family: var(--font-display); font-size: 14px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
-.run-card-actions { display: flex; gap: 5px; }
-.mini-btn { padding: 4px 8px; font-family: var(--font-ui); font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; background: var(--surface2); border: 1px solid var(--border2); color: var(--text-dim); cursor: pointer; border-radius: var(--r); transition: all 0.15s; }
-.mini-btn:hover { border-color: var(--accent); color: var(--accent); }
-.mini-btn.del:hover { border-color: var(--red); color: var(--red); }
-
-#export-bar { padding: 9px 11px; border-top: 1px solid var(--border); flex-shrink: 0; display: flex; gap: 7px; }
-
-/* ══════════════════════════════════════════
-   MAP
-══════════════════════════════════════════ */
-#map-container { position: relative; background: #060a07; }
-#map { width: 100%; height: 100%; }
-.leaflet-tile { filter: brightness(0.55) saturate(0.5) contrast(1.1); }
-.leaflet-container { background: #060a07; }
-.leaflet-control-zoom a { background: var(--surface) !important; color: var(--text-dim) !important; border-color: var(--border) !important; font-family: var(--font-mono) !important; }
-
-#map-overlay { position: absolute; top: 12px; right: 12px; z-index: 500; display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
-.map-badge { background: rgba(8,12,10,0.93); border: 1px solid var(--border2); padding: 6px 10px; font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; backdrop-filter: blur(8px); border-radius: var(--r); }
-.map-badge span { color: var(--accent); font-family: var(--font-display); font-size: 13px; display: block; margin-top: 2px; }
-
-/* ══════════════════════════════════════════
-   POST-RUN OVERLAY
-══════════════════════════════════════════ */
-#post-run-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(5,8,6,0.97); z-index: 2000;
-  flex-direction: column; align-items: center;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
-}
-#post-run-overlay.show { display: flex; }
-
-.post-run-inner { width: 100%; max-width: 440px; padding: 26px 20px 8px; display: flex; flex-direction: column; align-items: stretch; }
-
-.sys-notification { background: linear-gradient(135deg, rgba(168,255,62,0.07), rgba(168,255,62,0.02)); border: 1px solid rgba(168,255,62,0.5); border-radius: var(--r); padding: 13px 17px; text-align: center; margin-bottom: 18px; opacity: 0; transform: translateY(-8px); box-shadow: 0 0 28px rgba(168,255,62,0.07), inset 0 1px 0 rgba(168,255,62,0.08); }
-.sys-notification.appear { animation: sysappear 0.5s cubic-bezier(0.2,0.8,0.3,1) forwards; }
-@keyframes sysappear { to { opacity:1; transform:translateY(0); } }
-.sys-tag { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
-.sys-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: 0.04em; margin-bottom: 3px; }
-.sys-sub { font-family: var(--font-mono); font-size: 8px; color: var(--text-dim); letter-spacing: 0.1em; }
-
-.summary-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); margin-bottom: 18px; opacity: 0; }
-.summary-stats.appear { animation: fadeup 0.4s 0.3s ease forwards; }
-@keyframes fadeup { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
-.sum-stat { background: var(--surface); padding: 12px 10px; text-align: center; }
-.sum-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
-.sum-val { font-family: var(--font-display); font-size: 21px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
-.sum-unit { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); margin-top: 2px; }
-
-.xp-gain-section { margin-bottom: 16px; opacity: 0; }
-.xp-gain-section.appear { animation: fadeup 0.4s 0.5s ease forwards; }
-.xp-gain-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
-.xp-gain-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.13em; color: var(--text-dim); text-transform: uppercase; }
-.xp-gain-amount { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); opacity: 0; }
-.xp-gain-amount.pop { animation: xppop 0.5s 0.8s cubic-bezier(0.2,0.8,0.3,1.2) forwards; }
-@keyframes xppop { 0% { opacity:0; transform:scale(0.6); } 70% { transform:scale(1.12); } 100% { opacity:1; transform:scale(1); } }
-.xp-full-bar { height: 8px; background: var(--border2); border-radius: 5px; overflow: hidden; margin-bottom: 4px; position: relative; }
-.xp-full-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 5px; width: 0%; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 0 9px var(--accent-glow); position: relative; overflow: hidden; }
-.xp-full-fill::after { content: ''; position: absolute; top: 0; left: -35px; width: 25px; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent); animation: barshimmer 1.5s 1s ease-in-out forwards; }
-@keyframes barshimmer { from { left: -35px; } to { left: 100%; } }
-.xp-bar-labels { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); letter-spacing: 0.07em; }
-
-.stat-increases { margin-bottom: 16px; opacity: 0; }
-.stat-increases.appear { animation: fadeup 0.4s 0.7s ease forwards; }
-.stat-inc-title { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 9px; }
-.stat-row { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
-.stat-row-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; min-width: 74px; }
-.stat-row-bar { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
-.stat-row-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 1s ease; }
-.stat-row-fill.stamina { background: linear-gradient(90deg, #4fc3f7,#81d4fa); box-shadow: 0 0 5px rgba(79,195,247,0.4); }
-.stat-row-fill.speed { background: linear-gradient(90deg, var(--accent2), var(--accent)); box-shadow: 0 0 5px var(--accent-glow); }
-.stat-row-fill.endurance { background: linear-gradient(90deg, #b39ddb,#ce93d8); box-shadow: 0 0 5px rgba(179,157,219,0.4); }
-.stat-row-delta { font-family: var(--font-mono); font-size: 8px; color: var(--accent); min-width: 28px; text-align: right; opacity: 0; transition: opacity 0.3s 1.2s; }
-.stat-row-delta.show { opacity: 1; }
-
-.levelup-banner { display: none; text-align: center; margin-bottom: 16px; padding: 14px; background: linear-gradient(135deg, rgba(255,209,102,0.08), rgba(255,209,102,0.03)); border: 1px solid var(--gold); border-radius: var(--r); box-shadow: 0 0 28px rgba(255,209,102,0.1); }
-.levelup-banner.show { display: block; animation: levelbang 0.6s 1.5s cubic-bezier(0.2,0.8,0.3,1.3) both; }
-@keyframes levelbang { 0% { opacity:0; transform:scale(0.82); } 60% { transform:scale(1.04); } 100% { opacity:1; transform:scale(1); } }
-.levelup-tag { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
-.levelup-num { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--gold); letter-spacing: -0.02em; text-shadow: 0 0 18px rgba(255,209,102,0.5); line-height: 1; }
-.levelup-sub { font-family: var(--font-ui); font-size: 11px; color: var(--text-dim); letter-spacing: 0.1em; margin-top: 3px; }
-
-.chest-section { text-align: center; margin-bottom: 20px; opacity: 0; }
-.chest-section.appear { animation: fadeup 0.4s 1.1s ease forwards; }
-.chest-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 11px; }
-.chest-row { display: flex; justify-content: center; gap: 11px; }
-.chest { width: 74px; height: 74px; cursor: pointer; position: relative; border: 1px solid var(--border2); border-radius: 4px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s; overflow: hidden; }
-.chest:hover { transform: translateY(-2px); }
-.chest.common:hover { border-color: var(--text-dim); box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
-.chest.rare { border-color: rgba(79,195,247,0.35); }
-.chest.rare:hover { border-color: var(--blue); box-shadow: 0 4px 18px rgba(79,195,247,0.2); }
-.chest.epic { border-color: rgba(179,157,219,0.35); }
-.chest.epic:hover { border-color: var(--purple); box-shadow: 0 4px 18px rgba(179,157,219,0.2); }
-.chest.opened { opacity: 0.35; cursor: default; transform: none !important; }
-.chest-pixel { font-size: 28px; line-height: 1; }
-.chest-tier { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; }
-.chest.common .chest-tier { color: var(--text-muted); }
-.chest.rare .chest-tier { color: var(--blue); }
-.chest.epic .chest-tier { color: var(--purple); }
-.chest-lock { position: absolute; top: 4px; right: 4px; font-size: 8px; opacity: 0.35; }
-
-#post-run-dismiss { width: 100%; max-width: 440px; padding: 0 20px 32px; opacity: 0; }
-#post-run-dismiss.appear { animation: fadeup 0.4s 1.8s ease forwards; }
-
-/* ══════════════════════════════════════════
-   REWARD POPUP
-══════════════════════════════════════════ */
-#reward-popup { display: none; position: fixed; inset: 0; z-index: 3000; align-items: center; justify-content: center; background: rgba(5,8,6,0.87); backdrop-filter: blur(5px); }
-#reward-popup.show { display: flex; }
-.reward-box { background: var(--surface); border: 1px solid var(--border2); padding: 28px 24px; text-align: center; border-radius: 4px; max-width: 250px; width: 90%; animation: rewardpop 0.4s cubic-bezier(0.2,0.8,0.3,1.3); }
-@keyframes rewardpop { from { opacity:0; transform:scale(0.72) translateY(16px); } to { opacity:1; transform:none; } }
-.reward-box.rare { border-color: var(--blue); box-shadow: 0 0 36px rgba(79,195,247,0.12); }
-.reward-box.epic { border-color: var(--purple); box-shadow: 0 0 36px rgba(179,157,219,0.12); }
-.reward-box.legendary { border-color: var(--gold); box-shadow: 0 0 36px rgba(255,209,102,0.15); }
-.reward-rarity { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 10px; }
-.reward-rarity.common { color: var(--text-muted); }
-.reward-rarity.rare { color: var(--blue); }
-.reward-rarity.epic { color: var(--purple); }
-.reward-rarity.legendary { color: var(--gold); }
-.reward-icon { font-size: 48px; margin-bottom: 8px; display: block; }
-.reward-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.04em; margin-bottom: 5px; }
-.reward-desc { font-family: var(--font-mono); font-size: 8px; color: var(--text-dim); letter-spacing: 0.05em; line-height: 1.7; margin-bottom: 15px; white-space: pre-line; }
-
-/* ══════════════════════════════════════════
-   PROFILE SCREEN
-══════════════════════════════════════════ */
-#profile-screen {
-  display: none; position: fixed; inset: 0;
-  background: var(--bg); z-index: 1500;
-  flex-direction: column; overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-#profile-screen.show { display: flex; }
-
-.screen-header {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0; background: var(--bg);
-  position: sticky; top: 0; z-index: 10;
-}
-
-.screen-title { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.25em; color: var(--accent); text-transform: uppercase; text-shadow: 0 0 10px var(--accent-glow); }
-
-.screen-close { background: none; border: 1px solid var(--border2); color: var(--text-dim); font-family: var(--font-mono); font-size: 10px; padding: 6px 12px; cursor: pointer; border-radius: var(--r); transition: all 0.15s; letter-spacing: 0.1em; }
-.screen-close:hover { border-color: var(--text-dim); color: var(--text); }
-
-.profile-body { padding: 24px 20px 40px; max-width: 480px; margin: 0 auto; width: 100%; }
-
-/* Avatar section */
-.profile-avatar-section {
-  display: flex; flex-direction: column; align-items: center;
-  margin-bottom: 28px;
-}
-
-.avatar-frame {
-  width: 110px; height: 110px;
-  border: 1px solid var(--border2);
-  border-radius: 6px;
-  background: var(--surface2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 64px; line-height: 1;
-  margin-bottom: 14px;
-  position: relative;
-  box-shadow: 0 0 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
-}
-
-.avatar-frame::before { content: ''; position: absolute; top: 4px; left: 4px; width: 10px; height: 10px; border-top: 1px solid var(--border2); border-left: 1px solid var(--border2); }
-.avatar-frame::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 10px; height: 10px; border-bottom: 1px solid var(--border2); border-right: 1px solid var(--border2); }
-
-.avatar-equipped-badges {
-  position: absolute; bottom: -8px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; gap: 4px;
-}
-
-.equip-badge { background: var(--surface); border: 1px solid var(--border2); border-radius: 2px; padding: 2px 5px; font-size: 10px; line-height: 1; }
-
-/* Name editor */
-.name-editor { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-#player-name-input {
-  font-family: var(--font-display);
-  font-size: 16px; font-weight: 700; color: var(--text);
-  background: none; border: none; border-bottom: 1px solid var(--border2);
-  text-align: center; letter-spacing: 0.05em;
-  padding: 3px 6px; width: 180px;
-  transition: border-color 0.2s;
-}
-#player-name-input:focus { outline: none; border-bottom-color: var(--accent); }
-
-.edit-name-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 4px; transition: color 0.15s; }
-.edit-name-btn:hover { color: var(--accent); }
-
-.profile-level-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.profile-lv-badge { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; text-shadow: 0 0 8px var(--accent-glow); white-space: nowrap; }
-.profile-xp-bar { flex: 1; height: 5px; background: var(--border2); border-radius: 3px; overflow: hidden; }
-.profile-xp-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 3px; transition: width 0.8s ease; box-shadow: 0 0 6px var(--accent-glow); }
-.profile-xp-text { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.07em; text-align: center; }
-
-/* Profile stats */
-.profile-section-title { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.22em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; margin-top: 24px; }
-
-.profile-stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.profile-stat-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; min-width: 80px; }
-.profile-stat-bar { flex: 1; height: 5px; background: var(--border2); border-radius: 3px; overflow: hidden; }
-.profile-stat-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
-.profile-stat-fill.stamina { background: linear-gradient(90deg,#4fc3f7,#81d4fa); box-shadow: 0 0 5px rgba(79,195,247,0.3); }
-.profile-stat-fill.speed { background: linear-gradient(90deg, var(--accent2), var(--accent)); box-shadow: 0 0 5px var(--accent-glow); }
-.profile-stat-fill.endurance { background: linear-gradient(90deg,#b39ddb,#ce93d8); box-shadow: 0 0 5px rgba(179,157,219,0.3); }
-.profile-stat-val { font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); min-width: 30px; text-align: right; letter-spacing: 0.05em; }
-
-/* Profile totals */
-.profile-totals { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); margin-top: 24px; }
-.profile-total-box { background: var(--surface); padding: 12px 10px; text-align: center; }
-.profile-total-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
-.profile-total-val { font-family: var(--font-display); font-size: 18px; font-weight: 300; color: var(--text); }
-.profile-total-unit { font-family: var(--font-mono); font-size: 7px; color: var(--text-muted); margin-top: 2px; }
-
-/* Nav buttons */
-.profile-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 24px; }
-.profile-nav-btn {
-  padding: 14px 10px; text-align: center;
-  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  background: var(--surface); border: 1px solid var(--border2);
-  color: var(--text-dim); cursor: pointer; border-radius: var(--r);
-  transition: all 0.15s; display: flex; flex-direction: column;
-  align-items: center; gap: 5px;
-}
-.profile-nav-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-.profile-nav-icon { font-size: 20px; }
-
-/* ══════════════════════════════════════════
-   INVENTORY SCREEN
-══════════════════════════════════════════ */
-#inventory-screen {
-  display: none; position: fixed; inset: 0;
-  background: var(--bg); z-index: 1600;
-  flex-direction: column; overflow: hidden;
-}
-#inventory-screen.show { display: flex; }
-
-.inv-body { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
-
-/* Equipped slots */
-.inv-equipped-section { margin-bottom: 20px; }
-.inv-section-title { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.22em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
-
-.equip-slots { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-
-.equip-slot {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 10px 8px; text-align: center;
-  min-height: 72px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 4px; cursor: pointer;
-  transition: all 0.15s;
-}
-.equip-slot:hover { border-color: var(--text-muted); }
-.equip-slot.filled { border-color: var(--accent-dim); }
-.equip-slot-icon { font-size: 24px; line-height: 1; }
-.equip-slot-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.1em; color: var(--text-muted); text-transform: uppercase; }
-.equip-slot-name { font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.05em; }
-.equip-slot-unequip { font-size: 8px; color: var(--red); font-family: var(--font-mono); letter-spacing: 0.05em; opacity: 0.7; }
-
-/* Item grid */
-.inv-filter-row { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
-.inv-filter-btn { padding: 5px 10px; font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; background: var(--surface); border: 1px solid var(--border2); color: var(--text-muted); cursor: pointer; border-radius: var(--r); white-space: nowrap; transition: all 0.15s; }
-.inv-filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-
-.inv-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-
-.inv-item {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 10px 6px;
-  text-align: center; cursor: pointer; transition: all 0.15s;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  position: relative; overflow: hidden;
-}
-.inv-item:hover { border-color: var(--text-muted); transform: translateY(-1px); }
-.inv-item.equipped { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
-.inv-item.rarity-rare { border-color: rgba(79,195,247,0.3); }
-.inv-item.rarity-epic { border-color: rgba(179,157,219,0.3); }
-.inv-item.rarity-legendary { border-color: rgba(255,209,102,0.3); }
-.inv-item-icon { font-size: 24px; line-height: 1; }
-.inv-item-name { font-family: var(--font-ui); font-size: 8px; font-weight: 600; letter-spacing: 0.05em; color: var(--text-dim); text-align: center; line-height: 1.2; }
-.inv-item-rarity-dot { width: 4px; height: 4px; border-radius: 50%; }
-.inv-item-rarity-dot.common { background: var(--text-muted); }
-.inv-item-rarity-dot.rare { background: var(--blue); box-shadow: 0 0 4px rgba(79,195,247,0.5); }
-.inv-item-rarity-dot.epic { background: var(--purple); box-shadow: 0 0 4px rgba(179,157,219,0.5); }
-.inv-item-rarity-dot.legendary { background: var(--gold); box-shadow: 0 0 4px rgba(255,209,102,0.5); }
-.inv-equipped-tag { position: absolute; top: 3px; right: 3px; font-size: 7px; color: var(--accent); font-family: var(--font-mono); }
-
-.inv-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; line-height: 2; }
-.inv-empty-icon { font-size: 28px; display: block; margin-bottom: 12px; opacity: 0.2; }
-
-/* Item detail popup */
-#item-detail-popup { display: none; position: fixed; inset: 0; z-index: 3000; align-items: center; justify-content: center; background: rgba(5,8,6,0.9); backdrop-filter: blur(5px); }
-#item-detail-popup.show { display: flex; }
-
-.item-detail-box { background: var(--surface); padding: 26px 22px; border-radius: 4px; max-width: 260px; width: 90%; text-align: center; animation: rewardpop 0.3s cubic-bezier(0.2,0.8,0.3,1.3); }
-.item-detail-box.rare { border: 1px solid var(--blue); box-shadow: 0 0 30px rgba(79,195,247,0.1); }
-.item-detail-box.epic { border: 1px solid var(--purple); box-shadow: 0 0 30px rgba(179,157,219,0.1); }
-.item-detail-box.legendary { border: 1px solid var(--gold); box-shadow: 0 0 30px rgba(255,209,102,0.15); }
-.item-detail-box.common { border: 1px solid var(--border2); }
-.item-detail-rarity { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 12px; }
-.item-detail-rarity.common { color: var(--text-muted); }
-.item-detail-rarity.rare { color: var(--blue); }
-.item-detail-rarity.epic { color: var(--purple); }
-.item-detail-rarity.legendary { color: var(--gold); }
-.item-detail-icon { font-size: 56px; display: block; margin-bottom: 10px; }
-.item-detail-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.04em; margin-bottom: 5px; }
-.item-detail-slot { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.12em; margin-bottom: 8px; text-transform: uppercase; }
-.item-detail-desc { font-family: var(--font-mono); font-size: 8px; color: var(--text-dim); letter-spacing: 0.05em; line-height: 1.7; margin-bottom: 16px; white-space: pre-line; }
-.item-detail-actions { display: flex; gap: 8px; }
-
-/* ══════════════════════════════════════════
-   GPS / TOAST / MODALS
-══════════════════════════════════════════ */
-#gps-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 1000; align-items: center; justify-content: center; }
-#gps-modal.show { display: flex; }
-.modal-box { background: var(--surface); border: 1px solid var(--border2); padding: 26px; max-width: 280px; text-align: center; }
-.modal-box h3 { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px; text-transform: uppercase; }
-.modal-box p { font-family: var(--font-mono); font-size: 9px; line-height: 1.7; color: var(--text-dim); letter-spacing: 0.05em; margin-bottom: 16px; }
-
-#toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(14px); background: var(--surface2); border: 1px solid var(--border2); padding: 7px 14px; font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.12em; color: var(--text-dim); opacity: 0; transition: all 0.3s; z-index: 9998; border-radius: var(--r); white-space: nowrap; }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* ══════════════════════════════════════════
-   RESPONSIVE MOBILE
-══════════════════════════════════════════ */
-@media (max-width: 700px) {
-  html, body { overflow: hidden; height: 100%; }
-  #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-  #map-container { flex: 1 1 0; min-height: 0; order: 2; }
-  #panel { order: 3; flex: 0 0 auto; border-right: none; border-top: 1px solid var(--border); max-height: 54vh; overflow: hidden; }
-  #header { padding: 7px 11px; }
-  .logo-sub { display: none; }
-  .tab { padding: 8px 5px; font-size: 9px; }
-  #stats-grid { grid-template-columns: repeat(4,1fr); }
-  #stat-time { grid-column: 1 / -1; }
-  #stat-time .stat-value { font-size: 24px; }
-  .stat-value { font-size: 15px; }
-  .stat-box { padding: 8px 9px; }
-  .stat-box::before { display: none; }
-  #xp-strip { padding: 5px 10px; }
-  .status-row { padding: 6px 10px; }
-  #controls { padding: 8px 9px; gap: 6px; }
-  .btn { padding: 14px 6px; font-size: 11px; }
-  #route-info { padding: 5px 10px; }
-  .inv-grid { grid-template-columns: repeat(4,1fr); }
-}
-
-@media (max-width: 380px) {
-  #stat-time .stat-value { font-size: 20px; }
-  .stat-value { font-size: 13px; }
-  .stat-box { padding: 6px 7px; }
-  .btn { padding: 12px 4px; font-size: 10px; }
-  .inv-grid { grid-template-columns: repeat(3,1fr); }
+@media(max-width:380px){
+  #stat-time .stat-value{font-size:20px;}
+  .stat-value{font-size:13px;}
+  .stat-box{padding:6px 7px;}
+  .btn{padding:12px 4px;font-size:10px;}
+  .inv-grid{grid-template-columns:repeat(3,1fr);}
 }
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- ══ PANEL ══ -->
   <div id="panel">
     <div id="header">
       <div>
         <div class="logo">Stride</div>
         <div class="logo-sub">personal run tracker</div>
       </div>
-      <div class="player-hud" onclick="openProfile()" title="Open Profile">
+      <div class="player-hud" onclick="switchTab('profile')" title="Open Profile">
         <div class="player-level" id="hud-level">LV. 1</div>
         <div class="xp-bar-mini"><div class="xp-bar-fill" id="hud-xp-fill" style="width:0%"></div></div>
         <div class="xp-label" id="hud-xp-label">0 / 100 XP</div>
@@ -601,25 +384,21 @@ body::after {
           <div class="stat-unit">gps pts</div>
         </div>
       </div>
-
       <div id="xp-strip">
         <span class="xp-strip-label" id="xp-lv-tag">LV. 1</span>
         <div class="xp-strip-bar"><div class="xp-strip-fill" id="xp-strip-fill" style="width:0%"></div></div>
         <span class="xp-strip-next" id="xp-strip-next">0 XP</span>
       </div>
-
       <div class="status-row">
         <div class="dot ready" id="status-dot"></div>
         <span class="status-text" id="status-text">Ready — awaiting GPS</span>
         <span class="xp-earning" id="xp-earning-indicator">+XP</span>
       </div>
-
       <div id="controls">
         <button class="btn primary idle-glow" id="btn-start" onclick="startRun()">Start Run</button>
         <button class="btn" id="btn-pause" onclick="pauseRun()" disabled>Pause</button>
         <button class="btn danger" id="btn-stop" onclick="stopRun()" disabled>Stop</button>
       </div>
-
       <div id="route-info">No active route</div>
     </div>
 
@@ -639,78 +418,60 @@ body::after {
 
     <!-- PROFILE TAB -->
     <div id="tab-profile" class="tab-content">
-      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
-        <div style="padding:16px 16px 32px;">
+      <div id="tab-profile-inner">
+        <div class="profile-avatar-wrap">
+          <div class="avatar-frame">
+            <span id="p-avatar-icon">🧍</span>
+            <div class="avatar-badges" id="p-avatar-badges"></div>
+          </div>
+          <div class="name-row">
+            <input id="player-name-input" type="text" value="Runner" maxlength="16" oninput="saveName()"/>
+            <button class="edit-btn" onclick="document.getElementById('player-name-input').focus()">✎</button>
+          </div>
+          <div class="lv-xp-row">
+            <div class="profile-lv" id="p-lv">LV. 1</div>
+            <div class="profile-xp-bar"><div class="profile-xp-fill" id="p-xp-fill" style="width:0%"></div></div>
+          </div>
+          <div class="profile-xp-text" id="p-xp-text">0 / 100 XP</div>
+        </div>
 
-          <!-- Avatar + name -->
-          <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px;padding-top:4px;">
-            <div id="p-avatar-frame" style="width:90px;height:90px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:52px;margin-bottom:12px;position:relative;box-shadow:0 0 18px rgba(0,0,0,0.4);">
-              <span id="p-avatar-outfit">🧍</span>
-              <div id="p-avatar-badges" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;"></div>
-            </div>
-            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
-              <input id="player-name-input" type="text" value="Runner" maxlength="16" oninput="saveName()"
-                style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text);background:none;border:none;border-bottom:1px solid var(--border2);text-align:center;letter-spacing:0.04em;padding:2px 5px;width:160px;transition:border-color 0.2s;"
-                onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='var(--border2)'" />
-              <button onclick="document.getElementById('player-name-input').focus()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:3px;">✎</button>
-            </div>
-            <div style="display:flex;align-items:center;gap:9px;width:100%;max-width:240px;margin-bottom:4px;">
-              <div style="font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--accent);text-shadow:0 0 8px var(--accent-glow);white-space:nowrap;" id="p-lv-badge">LV. 1</div>
-              <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-xp-fill" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);width:0%"></div></div>
-            </div>
-            <div id="p-xp-text" style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.07em;">0 / 100 XP</div>
-          </div>
+        <div class="section-title">[ Attributes ]</div>
+        <div class="pstat-row">
+          <div class="pstat-label">Stamina</div>
+          <div class="pstat-bar"><div class="pstat-fill stamina" id="p-bar-stamina" style="width:0%"></div></div>
+          <div class="pstat-val" id="p-val-stamina">10</div>
+        </div>
+        <div class="pstat-row">
+          <div class="pstat-label">Speed</div>
+          <div class="pstat-bar"><div class="pstat-fill speed" id="p-bar-speed" style="width:0%"></div></div>
+          <div class="pstat-val" id="p-val-speed">10</div>
+        </div>
+        <div class="pstat-row">
+          <div class="pstat-label">Endurance</div>
+          <div class="pstat-bar"><div class="pstat-fill endurance" id="p-bar-endurance" style="width:0%"></div></div>
+          <div class="pstat-val" id="p-val-endurance">10</div>
+        </div>
 
-          <!-- Stat bars -->
-          <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.22em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">[ Attributes ]</div>
-          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
-            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Stamina</div>
-            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-stamina" style="height:100%;background:linear-gradient(90deg,#4fc3f7,#81d4fa);border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px rgba(79,195,247,0.3);"></div></div>
-            <div id="p-val-stamina" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
-            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Speed</div>
-            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-speed" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);"></div></div>
-            <div id="p-val-speed" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px;">
-            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Endurance</div>
-            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-endurance" style="height:100%;background:linear-gradient(90deg,#b39ddb,#ce93d8);border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px rgba(179,157,219,0.3);"></div></div>
-            <div id="p-val-endurance" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
-          </div>
+        <div class="section-title" style="margin-top:16px;">[ Stats ]</div>
+        <div class="totals-grid">
+          <div class="total-box"><div class="total-label">Runs</div><div class="total-val" id="p-runs">0</div></div>
+          <div class="total-box"><div class="total-label">Total km</div><div class="total-val" id="p-km">0.0</div></div>
+          <div class="total-box"><div class="total-label">Total XP</div><div class="total-val" id="p-xp">0</div></div>
+        </div>
 
-          <!-- Totals -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-bottom:18px;">
-            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
-              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Runs</div>
-              <div id="p-total-runs" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0</div>
-            </div>
-            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
-              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total km</div>
-              <div id="p-total-km" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0.0</div>
-            </div>
-            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
-              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total XP</div>
-              <div id="p-total-xp" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0</div>
-            </div>
-          </div>
-
-          <!-- Nav buttons -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <button onclick="openInventory()" style="padding:14px 10px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:5px;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-dim)'">
-              <span style="font-size:20px;">🎒</span>Inventory
-            </button>
-            <button onclick="showToast('Achievements coming soon!')" style="padding:14px 10px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:5px;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-dim)'">
-              <span style="font-size:20px;">🏆</span>Achievements
-            </button>
-          </div>
-
+        <div class="profile-nav">
+          <button class="pnav-btn" onclick="openInventory()">
+            <span class="pnav-icon">🎒</span>Inventory
+          </button>
+          <button class="pnav-btn" onclick="showToast('Achievements coming soon!')">
+            <span class="pnav-icon">🏆</span>Achievements
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ══ MAP ══ -->
+  <!-- MAP -->
   <div id="map-container">
     <div id="map"></div>
     <div id="map-overlay">
@@ -720,148 +481,86 @@ body::after {
   </div>
 </div>
 
-<!-- ══ POST-RUN OVERLAY ══ -->
+<!-- POST-RUN OVERLAY -->
 <div id="post-run-overlay">
-  <div class="post-run-inner">
-    <div class="sys-notification" id="sys-notif">
+  <div class="pr-inner">
+    <div class="sys-notif" id="sys-notif">
       <div class="sys-tag">[ System ]</div>
       <div class="sys-title">Quest Complete</div>
       <div class="sys-sub">Run recorded · All stats updated</div>
     </div>
-    <div class="summary-stats" id="summary-stats">
+    <div class="sum-stats" id="sum-stats">
       <div class="sum-stat"><div class="sum-label">Distance</div><div class="sum-val" id="sum-dist">0.00</div><div class="sum-unit">km</div></div>
       <div class="sum-stat"><div class="sum-label">Time</div><div class="sum-val" id="sum-time">00:00:00</div></div>
       <div class="sum-stat"><div class="sum-label">Pace</div><div class="sum-val" id="sum-pace">--:--</div><div class="sum-unit">min/km</div></div>
     </div>
-    <div class="xp-gain-section" id="xp-gain-section">
-      <div class="xp-gain-header">
-        <div class="xp-gain-label">Experience Gained</div>
-        <div class="xp-gain-amount" id="xp-gain-amount">+0 XP</div>
+    <div class="xp-section" id="xp-section">
+      <div class="xp-header">
+        <div class="xp-label-text">Experience Gained</div>
+        <div class="xp-amount" id="xp-amount">+0 XP</div>
       </div>
-      <div class="xp-full-bar"><div class="xp-full-fill" id="xp-full-fill"></div></div>
-      <div class="xp-bar-labels"><span id="xp-bar-current">0 XP</span><span id="xp-bar-next">100 XP to next level</span></div>
+      <div class="xp-bar-full"><div class="xp-bar-inner" id="xp-bar-inner"></div></div>
+      <div class="xp-bar-labels"><span id="xp-cur">0 XP</span><span id="xp-nxt">100 XP to next level</span></div>
     </div>
-    <div class="levelup-banner" id="levelup-banner">
-      <div class="levelup-tag">[ Level Up! ]</div>
-      <div class="levelup-num" id="levelup-num">LV. 2</div>
-      <div class="levelup-sub">New rank achieved</div>
+    <div class="levelup" id="levelup">
+      <div class="lu-tag">[ Level Up! ]</div>
+      <div class="lu-num" id="lu-num">LV. 2</div>
+      <div class="lu-sub">New rank achieved</div>
     </div>
-    <div class="stat-increases" id="stat-increases">
+    <div class="stat-inc" id="stat-inc">
       <div class="stat-inc-title">[ Stat Increases ]</div>
-      <div class="stat-row"><div class="stat-row-label">Stamina</div><div class="stat-row-bar"><div class="stat-row-fill stamina" id="bar-stamina"></div></div><div class="stat-row-delta" id="delta-stamina">+0</div></div>
-      <div class="stat-row"><div class="stat-row-label">Speed</div><div class="stat-row-bar"><div class="stat-row-fill speed" id="bar-speed"></div></div><div class="stat-row-delta" id="delta-speed">+0</div></div>
-      <div class="stat-row"><div class="stat-row-label">Endurance</div><div class="stat-row-bar"><div class="stat-row-fill endurance" id="bar-endurance"></div></div><div class="stat-row-delta" id="delta-endurance">+0</div></div>
+      <div class="si-row"><div class="si-label">Stamina</div><div class="si-bar"><div class="si-fill stamina" id="si-stamina"></div></div><div class="si-delta" id="d-stamina">+0</div></div>
+      <div class="si-row"><div class="si-label">Speed</div><div class="si-bar"><div class="si-fill speed" id="si-speed"></div></div><div class="si-delta" id="d-speed">+0</div></div>
+      <div class="si-row"><div class="si-label">Endurance</div><div class="si-bar"><div class="si-fill endurance" id="si-endurance"></div></div><div class="si-delta" id="d-endurance">+0</div></div>
     </div>
     <div class="chest-section" id="chest-section">
       <div class="chest-label">[ Run Rewards — Tap to Open ]</div>
       <div class="chest-row" id="chest-row"></div>
     </div>
   </div>
-  <div id="post-run-dismiss">
+  <div id="pr-dismiss">
     <button class="btn primary" onclick="dismissPostRun()" style="width:100%;padding:14px;font-size:13px;letter-spacing:0.15em">Continue →</button>
   </div>
 </div>
 
-<!-- ══ REWARD POPUP ══ -->
+<!-- REWARD POPUP -->
 <div id="reward-popup">
   <div class="reward-box" id="reward-box">
-    <div class="reward-rarity" id="reward-rarity">Common</div>
+    <div class="rarity-tag" id="reward-rarity">Common</div>
     <span class="reward-icon" id="reward-icon">📦</span>
     <div class="reward-name" id="reward-name">Item</div>
-    <div class="reward-desc" id="reward-desc">A reward for your effort.</div>
+    <div class="reward-desc" id="reward-desc"></div>
     <button class="btn primary" onclick="closeRewardAndSave()" style="width:100%;padding:11px">Add to Inventory</button>
   </div>
 </div>
 
-<!-- ══ PROFILE SCREEN ══ -->
-<div id="profile-screen">
-  <div class="screen-header">
-    <div class="screen-title">Player Profile</div>
-    <button class="screen-close" onclick="closeProfile()">✕ Close</button>
-  </div>
-  <div class="profile-body">
-    <div class="profile-avatar-section">
-      <div class="avatar-frame" id="avatar-frame">
-        <span id="avatar-outfit">🧍</span>
-        <div class="avatar-equipped-badges" id="avatar-badges"></div>
-      </div>
-      <div class="name-editor">
-        <input id="player-name-input" type="text" value="Runner" maxlength="16" oninput="saveName()" />
-        <button class="edit-name-btn" onclick="document.getElementById('player-name-input').focus()">✎</button>
-      </div>
-      <div class="profile-level-row">
-        <div class="profile-lv-badge" id="profile-lv-badge">LV. 1</div>
-        <div class="profile-xp-bar"><div class="profile-xp-fill" id="profile-xp-fill" style="width:0%"></div></div>
-      </div>
-      <div class="profile-xp-text" id="profile-xp-text">0 / 100 XP to next level</div>
-    </div>
-
-    <div class="profile-section-title">[ Attributes ]</div>
-    <div class="profile-stat-row">
-      <div class="profile-stat-label">Stamina</div>
-      <div class="profile-stat-bar"><div class="profile-stat-fill stamina" id="profile-bar-stamina" style="width:0%"></div></div>
-      <div class="profile-stat-val" id="profile-val-stamina">10</div>
-    </div>
-    <div class="profile-stat-row">
-      <div class="profile-stat-label">Speed</div>
-      <div class="profile-stat-bar"><div class="profile-stat-fill speed" id="profile-bar-speed" style="width:0%"></div></div>
-      <div class="profile-stat-val" id="profile-val-speed">10</div>
-    </div>
-    <div class="profile-stat-row">
-      <div class="profile-stat-label">Endurance</div>
-      <div class="profile-stat-bar"><div class="profile-stat-fill endurance" id="profile-bar-endurance" style="width:0%"></div></div>
-      <div class="profile-stat-val" id="profile-val-endurance">10</div>
-    </div>
-
-    <div class="profile-totals" id="profile-totals">
-      <div class="profile-total-box"><div class="profile-total-label">Total Runs</div><div class="profile-total-val" id="pt-runs">0</div></div>
-      <div class="profile-total-box"><div class="profile-total-label">Total km</div><div class="profile-total-val" id="pt-km">0.0</div></div>
-      <div class="profile-total-box"><div class="profile-total-label">Total XP</div><div class="profile-total-val" id="pt-xp">0</div></div>
-    </div>
-
-    <div class="profile-nav">
-      <button class="profile-nav-btn" onclick="openInventory()">
-        <span class="profile-nav-icon">🎒</span>
-        Inventory
-      </button>
-      <button class="profile-nav-btn" onclick="showToast('Achievements coming soon!')">
-        <span class="profile-nav-icon">🏆</span>
-        Achievements
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ INVENTORY SCREEN ══ -->
+<!-- INVENTORY SCREEN -->
 <div id="inventory-screen">
   <div class="screen-header">
     <div class="screen-title">Inventory</div>
     <button class="screen-close" onclick="closeInventory()">✕ Close</button>
   </div>
   <div class="inv-body">
-    <div class="inv-equipped-section">
-      <div class="inv-section-title">[ Equipped ]</div>
-      <div class="equip-slots">
-        <div class="equip-slot" id="slot-head" onclick="openSlotDetail('head')">
-          <div class="equip-slot-icon" id="slot-head-icon">🪖</div>
-          <div class="equip-slot-label">Head</div>
-          <div class="equip-slot-name" id="slot-head-name">Empty</div>
-        </div>
-        <div class="equip-slot" id="slot-outfit" onclick="openSlotDetail('outfit')">
-          <div class="equip-slot-icon" id="slot-outfit-icon">👕</div>
-          <div class="equip-slot-label">Outfit</div>
-          <div class="equip-slot-name" id="slot-outfit-name">Empty</div>
-        </div>
-        <div class="equip-slot" id="slot-accessory" onclick="openSlotDetail('accessory')">
-          <div class="equip-slot-icon" id="slot-accessory-icon">💍</div>
-          <div class="equip-slot-label">Accessory</div>
-          <div class="equip-slot-name" id="slot-accessory-name">Empty</div>
-        </div>
+    <div class="inv-section-title">[ Equipped ]</div>
+    <div class="equip-slots">
+      <div class="equip-slot" id="slot-head" onclick="openSlotDetail('head')">
+        <div class="equip-slot-icon" id="slot-head-icon">🪖</div>
+        <div class="equip-slot-label">Head</div>
+        <div class="equip-slot-name" id="slot-head-name">Empty</div>
+      </div>
+      <div class="equip-slot" id="slot-outfit" onclick="openSlotDetail('outfit')">
+        <div class="equip-slot-icon" id="slot-outfit-icon">👕</div>
+        <div class="equip-slot-label">Outfit</div>
+        <div class="equip-slot-name" id="slot-outfit-name">Empty</div>
+      </div>
+      <div class="equip-slot" id="slot-accessory" onclick="openSlotDetail('accessory')">
+        <div class="equip-slot-icon" id="slot-accessory-icon">💍</div>
+        <div class="equip-slot-label">Accessory</div>
+        <div class="equip-slot-name" id="slot-accessory-name">Empty</div>
       </div>
     </div>
-
     <div class="inv-section-title">[ Collection ]</div>
-    <div class="inv-filter-row" id="inv-filter-row">
+    <div class="inv-filter-row">
       <button class="inv-filter-btn active" onclick="filterInv('all',this)">All</button>
       <button class="inv-filter-btn" onclick="filterInv('head',this)">Head</button>
       <button class="inv-filter-btn" onclick="filterInv('outfit',this)">Outfit</button>
@@ -874,14 +573,14 @@ body::after {
   </div>
 </div>
 
-<!-- ══ ITEM DETAIL POPUP ══ -->
-<div id="item-detail-popup">
+<!-- ITEM DETAIL -->
+<div id="item-detail">
   <div class="item-detail-box" id="item-detail-box">
     <div class="item-detail-rarity" id="item-detail-rarity">Common</div>
     <span class="item-detail-icon" id="item-detail-icon">📦</span>
     <div class="item-detail-name" id="item-detail-name">Item</div>
     <div class="item-detail-slot" id="item-detail-slot">Head Slot</div>
-    <div class="item-detail-desc" id="item-detail-desc">Description</div>
+    <div class="item-detail-desc" id="item-detail-desc"></div>
     <div class="item-detail-actions">
       <button class="btn" onclick="closeItemDetail()" style="font-size:11px;padding:10px">Back</button>
       <button class="btn primary" id="item-equip-btn" onclick="equipCurrentItem()" style="font-size:11px;padding:10px">Equip</button>
@@ -889,7 +588,7 @@ body::after {
   </div>
 </div>
 
-<!-- ══ GPS MODAL ══ -->
+<!-- GPS MODAL -->
 <div id="gps-modal">
   <div class="modal-box">
     <h3>GPS Required</h3>
@@ -901,329 +600,417 @@ body::after {
 <div id="toast"></div>
 
 <script>
-// ══════════════════════════════════════════════
-// RPG SYSTEM
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
+// RPG
+// ════════════════════════════════════════
 const XP_PER_KM = 100;
 function xpForLevel(lv) { return Math.floor(100 * Math.pow(lv, 1.4)); }
 function calcXP(km) { return Math.round(km * XP_PER_KM); }
 
 function loadPlayer() {
   try {
-    return JSON.parse(localStorage.getItem('stride_player') || 'null')
-      || { level:1, xp:0, totalXp:0, stamina:10, speed:10, endurance:10, name:'Runner', equipped:{head:null,outfit:null,accessory:null}, inventory:[] };
-  } catch {
-    return { level:1, xp:0, totalXp:0, stamina:10, speed:10, endurance:10, name:'Runner', equipped:{head:null,outfit:null,accessory:null}, inventory:[] };
-  }
+    const p = JSON.parse(localStorage.getItem('stride_player') || 'null');
+    if (p) {
+      if (!p.equipped) p.equipped = { head:null, outfit:null, accessory:null };
+      if (!p.inventory) p.inventory = [];
+      if (!p.name) p.name = 'Runner';
+      return p;
+    }
+  } catch(e) {}
+  return { level:1, xp:0, totalXp:0, stamina:10, speed:10, endurance:10, name:'Runner', equipped:{head:null,outfit:null,accessory:null}, inventory:[] };
 }
 
 function savePlayer() { localStorage.setItem('stride_player', JSON.stringify(player)); }
 let player = loadPlayer();
-if (!player.equipped) player.equipped = { head:null, outfit:null, accessory:null };
-if (!player.inventory) player.inventory = [];
-if (!player.name) player.name = 'Runner';
 
-// ── REWARD POOL ──
 const REWARDS = {
   common: [
     { icon:'🧢', name:"Runner's Cap",   slot:'head',      desc:"A simple cap for sunny runs.\nKeeps the glare away." },
     { icon:'🎽', name:"Basic Tee",       slot:'outfit',    desc:"Breathable training shirt.\nYour first piece of gear." },
     { icon:'💧', name:"Water Bottle",    slot:'accessory', desc:"Stay hydrated, runner.\nEvery drop counts." },
-    { icon:'🩴', name:"Trail Sandals",   slot:'outfit',    desc:"Light footwear for casual jogs.\nEasy on the feet." },
+    { icon:'🩴', name:"Trail Sandals",   slot:'outfit',    desc:"Light footwear for casual jogs." },
     { icon:'🧦', name:"Sport Socks",     slot:'accessory', desc:"Compression socks for longer runs." },
   ],
   rare: [
     { icon:'🥽', name:"Sport Shades",    slot:'accessory', desc:"Rare eyewear for focused runners.\nBlocks UV and excuses." },
-    { icon:'🎒', name:"Runner Pack",     slot:'accessory', desc:"Rare carry rig for long hauls.\nHolds everything you need." },
+    { icon:'🎒', name:"Runner Pack",     slot:'accessory', desc:"Rare carry rig for long hauls." },
     { icon:'🦺', name:"Reflective Vest", slot:'outfit',    desc:"Rare visibility gear.\nPerfect for night runs." },
-    { icon:'🎩', name:"Fedora",          slot:'head',      desc:"Rare hat. Run in style.\nTip it at every km." },
+    { icon:'🎩', name:"Fedora",          slot:'head',      desc:"Rare hat. Run in style." },
   ],
   epic: [
-    { icon:'👑', name:"Champion Crown",  slot:'head',      desc:"Epic headwear. Few have earned this.\nWear it with pride." },
-    { icon:'⚡', name:"Speed Amulet",    slot:'accessory', desc:"Epic talisman of velocity.\nYour pace is legend." },
-    { icon:'🛡️', name:"Iron Will Badge", slot:'accessory', desc:"Epic badge of resilience.\nConsistency is power." },
-    { icon:'🥷', name:"Shadow Suit",     slot:'outfit',    desc:"Epic suit of the night runner.\nBecome the dark." },
+    { icon:'👑', name:"Champion Crown",  slot:'head',      desc:"Epic headwear. Few have earned this." },
+    { icon:'⚡', name:"Speed Amulet",    slot:'accessory', desc:"Epic talisman of velocity." },
+    { icon:'🛡️', name:"Iron Will Badge", slot:'accessory', desc:"Epic badge of resilience." },
+    { icon:'🥷', name:"Shadow Suit",     slot:'outfit',    desc:"Epic suit of the night runner." },
   ],
 };
 
 function pickReward(km) {
   const r = Math.random();
   let tier;
-  if (km >= 10) tier = r < 0.3 ? 'epic' : r < 0.7 ? 'rare' : 'common';
+  if (km >= 10)     tier = r < 0.30 ? 'epic' : r < 0.70 ? 'rare' : 'common';
   else if (km >= 5) tier = r < 0.12 ? 'epic' : r < 0.45 ? 'rare' : 'common';
-  else tier = r < 0.04 ? 'epic' : r < 0.22 ? 'rare' : 'common';
+  else              tier = r < 0.04 ? 'epic' : r < 0.22 ? 'rare' : 'common';
   const pool = REWARDS[tier];
-  const base = pool[Math.floor(Math.random() * pool.length)];
-  return { ...base, tier, uid: Date.now() + Math.random() };
+  return { ...pool[Math.floor(Math.random() * pool.length)], tier, uid: Date.now() + Math.random() };
 }
 
-// ── HUD UPDATE ──
 function updateHUD() {
   const needed = xpForLevel(player.level);
   const pct = Math.min(100, (player.xp / needed) * 100);
-  document.getElementById('hud-level').textContent = `LV. ${player.level}`;
+  document.getElementById('hud-level').textContent = 'LV. ' + player.level;
   document.getElementById('hud-xp-fill').style.width = pct + '%';
-  document.getElementById('hud-xp-label').textContent = `${player.xp} / ${needed} XP`;
-  document.getElementById('xp-lv-tag').textContent = `LV. ${player.level}`;
+  document.getElementById('hud-xp-label').textContent = player.xp + ' / ' + needed + ' XP';
+  document.getElementById('xp-lv-tag').textContent = 'LV. ' + player.level;
   document.getElementById('xp-strip-fill').style.width = pct + '%';
-  document.getElementById('xp-strip-next').textContent = `${needed - player.xp} XP`;
+  document.getElementById('xp-strip-next').textContent = (needed - player.xp) + ' XP';
 }
 
-// ══════════════════════════════════════════════
-// RUN STATE
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
 const state = {
   running:false, paused:false,
   startTime:null, pausedAt:null,
   totalPausedMs:0, elapsed:0,
   coords:[], distance:0,
-  watchId:null, timerInterval:null, selectedRunId:null,
+  watchId:null, timerInterval:null, selectedRunId:null
 };
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // MAP
-// ══════════════════════════════════════════════
-const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([0,0], 2);
+// ════════════════════════════════════════
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([0, 0], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
 
 let routeLine = L.polyline([], { color:'#a8ff3e', weight:4, opacity:0.9 }).addTo(map);
-let posMarker=null, accuracyCircle=null, historyLine=null, startMarker=null, endMarker=null;
-let idleMarker=null, idleCircle=null;
+let posMarker = null, accuracyCircle = null;
+let historyLine = null, startMarker = null, endMarker = null;
+let idleMarker = null, idleCircle = null;
 
-navigator.geolocation?.getCurrentPosition(pos => {
-  map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-  updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-}, null, { enableHighAccuracy:true, timeout:8000 });
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+    updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+  }, null, { enableHighAccuracy:true, timeout:8000 });
 
-navigator.geolocation?.watchPosition(pos => {
-  if (!state.running) updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
-}, null, { enableHighAccuracy:true, maximumAge:5000 });
+  navigator.geolocation.watchPosition(function(pos) {
+    if (!state.running) updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+  }, null, { enableHighAccuracy:true, maximumAge:5000 });
+}
 
 function updateIdleMarker(lat, lng, acc) {
   if (state.running) return;
   if (!idleMarker) {
-    idleMarker = L.circleMarker([lat,lng],{radius:7,color:'#4a9eff',fillColor:'#4a9eff',fillOpacity:0.9,weight:2}).addTo(map).bindTooltip('You are here');
-    idleCircle = L.circle([lat,lng],{radius:acc,color:'#4a9eff',fillColor:'#4a9eff',fillOpacity:0.07,weight:1}).addTo(map);
-  } else { idleMarker.setLatLng([lat,lng]); idleCircle.setLatLng([lat,lng]); idleCircle.setRadius(acc); }
+    idleMarker = L.circleMarker([lat,lng], { radius:7, color:'#4a9eff', fillColor:'#4a9eff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('You are here');
+    idleCircle = L.circle([lat,lng], { radius:acc, color:'#4a9eff', fillColor:'#4a9eff', fillOpacity:0.07, weight:1 }).addTo(map);
+  } else {
+    idleMarker.setLatLng([lat, lng]);
+    idleCircle.setLatLng([lat, lng]);
+    idleCircle.setRadius(acc);
+  }
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // INDEXEDDB
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 let db;
 function openDB() {
-  return new Promise((res,rej) => {
-    const req = indexedDB.open('stride_db', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('runs',{keyPath:'id',autoIncrement:true});
-    req.onsuccess = e => { db=e.target.result; res(db); };
-    req.onerror = () => rej(req.error);
+  return new Promise(function(res, rej) {
+    var req = indexedDB.open('stride_db', 1);
+    req.onupgradeneeded = function(e) { e.target.result.createObjectStore('runs', { keyPath:'id', autoIncrement:true }); };
+    req.onsuccess = function(e) { db = e.target.result; res(db); };
+    req.onerror = function() { rej(req.error); };
   });
 }
-function saveRun(run) { return new Promise((res,rej) => { const req=db.transaction('runs','readwrite').objectStore('runs').add(run); req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }); }
-function getAllRuns() { return new Promise((res,rej) => { const req=db.transaction('runs','readonly').objectStore('runs').getAll(); req.onsuccess=()=>res(req.result.reverse()); req.onerror=()=>rej(req.error); }); }
-function deleteRun(id) { return new Promise((res,rej) => { const req=db.transaction('runs','readwrite').objectStore('runs').delete(id); req.onsuccess=()=>res(); req.onerror=()=>rej(req.error); }); }
-
-// ══════════════════════════════════════════════
-// TABS
-// ══════════════════════════════════════════════
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['record','history','profile'][i]===tab));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
-  if (tab==='history') loadHistory();
-  if (tab==='profile') refreshProfileTab();
+function saveRun(run) {
+  return new Promise(function(res, rej) {
+    var req = db.transaction('runs','readwrite').objectStore('runs').add(run);
+    req.onsuccess = function() { res(req.result); };
+    req.onerror = function() { rej(req.error); };
+  });
+}
+function getAllRuns() {
+  return new Promise(function(res, rej) {
+    var req = db.transaction('runs','readonly').objectStore('runs').getAll();
+    req.onsuccess = function() { res(req.result.reverse()); };
+    req.onerror = function() { rej(req.error); };
+  });
+}
+function deleteRun(id) {
+  return new Promise(function(res, rej) {
+    var req = db.transaction('runs','readwrite').objectStore('runs').delete(id);
+    req.onsuccess = function() { res(); };
+    req.onerror = function() { rej(req.error); };
+  });
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function switchTab(tab) {
+  var tabs = document.querySelectorAll('.tab');
+  var names = ['record', 'history', 'profile'];
+  tabs.forEach(function(t, i) { t.classList.toggle('active', names[i] === tab); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'history') loadHistory();
+  if (tab === 'profile') refreshProfile();
+}
+
+// ════════════════════════════════════════
 // TRACKING
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 function startRun() {
   if (!navigator.geolocation) { showToast('GPS not supported'); return; }
-  state.running=true; state.paused=false;
-  state.startTime=Date.now(); state.totalPausedMs=0;
-  state.coords=[]; state.distance=0; state.elapsed=0;
+  state.running = true; state.paused = false;
+  state.startTime = Date.now(); state.totalPausedMs = 0;
+  state.coords = []; state.distance = 0; state.elapsed = 0;
 
   routeLine.setLatLngs([]);
-  [historyLine,startMarker,endMarker].forEach(l=>{if(l)map.removeLayer(l);}); historyLine=startMarker=endMarker=null;
-  if(idleMarker){map.removeLayer(idleMarker);map.removeLayer(idleCircle);idleMarker=idleCircle=null;}
+  if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
+  if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+  if (endMarker)   { map.removeLayer(endMarker);   endMarker = null; }
+  if (idleMarker)  { map.removeLayer(idleMarker);  map.removeLayer(idleCircle); idleMarker = null; idleCircle = null; }
 
-  document.getElementById('btn-start').disabled=true; document.getElementById('btn-start').classList.remove('idle-glow');
-  document.getElementById('btn-pause').disabled=false; document.getElementById('btn-stop').disabled=false;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-start').classList.remove('idle-glow');
+  document.getElementById('btn-pause').disabled = false;
+  document.getElementById('btn-stop').disabled = false;
   document.getElementById('xp-strip-fill').classList.add('active');
   document.getElementById('xp-earning-indicator').classList.add('visible');
-  setStatus('recording','Recording…');
-  state.timerInterval=setInterval(updateTimer,1000);
-  state.watchId=navigator.geolocation.watchPosition(onPosition,onGPSError,{enableHighAccuracy:true,maximumAge:2000,timeout:10000});
+  setStatus('recording', 'Recording…');
+
+  state.timerInterval = setInterval(updateTimer, 1000);
+  state.watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, { enableHighAccuracy:true, maximumAge:2000, timeout:10000 });
   showBadges(true);
 }
 
 function onPosition(pos) {
-  if(!state.running||state.paused) return;
-  const {latitude:lat,longitude:lng,accuracy}=pos.coords;
-  if(accuracy>50) return;
-  let moved = false;
-  if(state.coords.length>0){
-    const last=state.coords[state.coords.length-1];
-    const d=haversine(last[0],last[1],lat,lng);
-    if(d>0.003&&d<0.3){ state.distance+=d; moved=true; }
+  if (!state.running || state.paused) return;
+  var lat = pos.coords.latitude, lng = pos.coords.longitude, accuracy = pos.coords.accuracy;
+  if (accuracy > 50) return;
+
+  var moved = false;
+  if (state.coords.length > 0) {
+    var last = state.coords[state.coords.length - 1];
+    var d = haversine(last[0], last[1], lat, lng);
+    if (d > 0.003 && d < 0.3) { state.distance += d; moved = true; }
   } else {
-    moved = true; // first point always counts
+    moved = true;
   }
-  // Only add point and update trail if user actually moved
-  if(!moved) {
-    // Still update marker position for accuracy
-    if(posMarker){posMarker.setLatLng([lat,lng]);accuracyCircle.setLatLng([lat,lng]);accuracyCircle.setRadius(accuracy);}
-    map.panTo([lat,lng],{animate:true,duration:0.5});
-    return;
+
+  // Always update marker position
+  if (!posMarker) {
+    posMarker = L.circleMarker([lat,lng], { radius:9, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:3 }).addTo(map);
+    accuracyCircle = L.circle([lat,lng], { radius:accuracy, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:0.07, weight:1 }).addTo(map);
+  } else {
+    posMarker.setLatLng([lat, lng]);
+    accuracyCircle.setLatLng([lat, lng]);
+    accuracyCircle.setRadius(accuracy);
   }
-  state.coords.push([lat,lng]);
+  map.panTo([lat, lng], { animate:true, duration:0.5 });
+
+  // Only count point and distance if actually moved
+  if (!moved) return;
+
+  state.coords.push([lat, lng]);
   routeLine.setLatLngs(state.coords);
-  if(!posMarker){posMarker=L.circleMarker([lat,lng],{radius:9,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:1,weight:3}).addTo(map);accuracyCircle=L.circle([lat,lng],{radius:accuracy,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:0.07,weight:1}).addTo(map);}
-  else{posMarker.setLatLng([lat,lng]);accuracyCircle.setLatLng([lat,lng]);accuracyCircle.setRadius(accuracy);}
-  map.panTo([lat,lng],{animate:true,duration:0.5});
   updateStats();
-  document.getElementById('display-pts').textContent=state.coords.length;
-  document.getElementById('route-info').textContent=`${state.coords.length} GPS pts · ±${Math.round(accuracy)}m`;
+  document.getElementById('display-pts').textContent = state.coords.length;
+  document.getElementById('route-info').textContent = state.coords.length + ' GPS pts · ±' + Math.round(accuracy) + 'm';
 }
 
 function onGPSError(err) {
-  if(err.code===1){document.getElementById('gps-modal').classList.add('show');stopRun(true);}
-  else setStatus('paused','GPS signal lost…');
+  if (err.code === 1) { document.getElementById('gps-modal').classList.add('show'); stopRun(true); }
+  else setStatus('paused', 'GPS signal lost…');
 }
 
 function pauseRun() {
-  if(state.paused){state.paused=false;state.totalPausedMs+=Date.now()-state.pausedAt;document.getElementById('btn-pause').textContent='Pause';setStatus('recording','Recording…');document.getElementById('xp-earning-indicator').classList.add('visible');}
-  else{state.paused=true;state.pausedAt=Date.now();document.getElementById('btn-pause').textContent='Resume';setStatus('paused','Paused');document.getElementById('xp-earning-indicator').classList.remove('visible');}
+  if (state.paused) {
+    state.paused = false;
+    state.totalPausedMs += Date.now() - state.pausedAt;
+    document.getElementById('btn-pause').textContent = 'Pause';
+    setStatus('recording', 'Recording…');
+    document.getElementById('xp-earning-indicator').classList.add('visible');
+  } else {
+    state.paused = true; state.pausedAt = Date.now();
+    document.getElementById('btn-pause').textContent = 'Resume';
+    setStatus('paused', 'Paused');
+    document.getElementById('xp-earning-indicator').classList.remove('visible');
+  }
 }
 
-function stopRun(silent=false) {
-  if(!state.running&&!silent) return;
+function stopRun(silent) {
+  if (!state.running && !silent) return;
   clearInterval(state.timerInterval);
-  if(state.watchId!==null) navigator.geolocation.clearWatch(state.watchId);
-  const run={date:new Date().toISOString(),duration:state.elapsed,distance:state.distance,coords:state.coords};
-  state.running=false; state.paused=false;
-  document.getElementById('btn-start').disabled=false; document.getElementById('btn-start').classList.add('idle-glow');
-  document.getElementById('btn-pause').disabled=true; document.getElementById('btn-stop').disabled=true; document.getElementById('btn-pause').textContent='Pause';
-  document.getElementById('xp-strip-fill').classList.remove('active'); document.getElementById('xp-earning-indicator').classList.remove('visible');
-  setStatus('ready','Ready — awaiting GPS'); showBadges(false);
-  if(posMarker){map.removeLayer(posMarker);posMarker=null;} if(accuracyCircle){map.removeLayer(accuracyCircle);accuracyCircle=null;}
-  if(state.coords.length>2&&!silent){saveRun(run).then(()=>{renderEndMarkers();triggerPostRun(run);});}
-  else if(!silent){showToast('Run too short to save');routeLine.setLatLngs([]);}
+  if (state.watchId !== null) { navigator.geolocation.clearWatch(state.watchId); state.watchId = null; }
+
+  var run = { date: new Date().toISOString(), duration: state.elapsed, distance: state.distance, coords: state.coords };
+
+  state.running = false; state.paused = false;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-start').classList.add('idle-glow');
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('btn-pause').textContent = 'Pause';
+  document.getElementById('xp-strip-fill').classList.remove('active');
+  document.getElementById('xp-earning-indicator').classList.remove('visible');
+  setStatus('ready', 'Ready — awaiting GPS');
+  showBadges(false);
+
+  if (posMarker) { map.removeLayer(posMarker); posMarker = null; }
+  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+
+  if (state.coords.length > 2 && !silent) {
+    saveRun(run).then(function() { renderEndMarkers(); triggerPostRun(run); });
+  } else if (!silent) {
+    showToast('Run too short to save');
+    routeLine.setLatLngs([]);
+  }
 }
 
 function renderEndMarkers() {
-  if(state.coords.length<2) return;
-  startMarker=L.circleMarker(state.coords[0],{radius:7,color:'#fff',fillColor:'#fff',fillOpacity:0.9,weight:2}).addTo(map).bindTooltip('Start');
-  endMarker=L.circleMarker(state.coords[state.coords.length-1],{radius:7,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:1,weight:2}).addTo(map).bindTooltip('Finish');
+  if (state.coords.length < 2) return;
+  startMarker = L.circleMarker(state.coords[0], { radius:7, color:'#fff', fillColor:'#fff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('Start');
+  endMarker   = L.circleMarker(state.coords[state.coords.length-1], { radius:7, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:2 }).addTo(map).bindTooltip('Finish');
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // TIMER / STATS
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 function updateTimer() {
-  if(state.paused) return;
-  state.elapsed=Math.floor((Date.now()-state.startTime-state.totalPausedMs)/1000);
-  document.getElementById('display-time').textContent=formatDuration(state.elapsed);
+  if (state.paused) return;
+  state.elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedMs) / 1000);
+  document.getElementById('display-time').textContent = formatDuration(state.elapsed);
   updateStats();
 }
 
 function updateStats() {
-  const km=state.distance;
-  document.getElementById('display-dist').textContent=km.toFixed(2);
-  if(km>0.05&&state.elapsed>0){
-    const ps=state.elapsed/km;
-    document.getElementById('display-pace').textContent=formatPace(ps);
-    document.getElementById('display-speed').textContent=(km/(state.elapsed/3600)).toFixed(1);
-    document.getElementById('mb-dist').textContent=km.toFixed(2)+' km';
-    document.getElementById('mb-pace').textContent=formatPace(ps)+' /km';
+  var km = state.distance;
+  document.getElementById('display-dist').textContent = km.toFixed(2);
+  if (km > 0.05 && state.elapsed > 0) {
+    var ps = state.elapsed / km;
+    document.getElementById('display-pace').textContent = formatPace(ps);
+    document.getElementById('display-speed').textContent = (km / (state.elapsed / 3600)).toFixed(1);
+    document.getElementById('mb-dist').textContent = km.toFixed(2) + ' km';
+    document.getElementById('mb-pace').textContent = formatPace(ps) + ' /km';
   }
 }
 
-// ══════════════════════════════════════════════
-// POST-RUN SEQUENCE
-// ══════════════════════════════════════════════
-let pendingReward = null;
+// ════════════════════════════════════════
+// POST-RUN
+// ════════════════════════════════════════
+var pendingReward = null;
 
 function triggerPostRun(run) {
-  const xpEarned = calcXP(run.distance);
+  var xpEarned = calcXP(run.distance);
   player.xp += xpEarned; player.totalXp += xpEarned;
-  let leveled=false;
-  while(player.xp>=xpForLevel(player.level)){player.xp-=xpForLevel(player.level);player.level++;leveled=true;}
-  const stD=Math.max(1,Math.round(run.distance*2));
-  const spD=Math.max(1,Math.round((run.distance/Math.max(0.01,run.duration/3600))*0.3));
-  const enD=Math.max(1,Math.round(run.duration/60));
-  player.stamina+=stD; player.speed+=spD; player.endurance+=enD;
+
+  var leveled = false;
+  while (player.xp >= xpForLevel(player.level)) {
+    player.xp -= xpForLevel(player.level);
+    player.level++;
+    leveled = true;
+  }
+
+  var stD = Math.max(1, Math.round(run.distance * 2));
+  var spD = Math.max(1, Math.round((run.distance / Math.max(0.01, run.duration / 3600)) * 0.3));
+  var enD = Math.max(1, Math.round(run.duration / 60));
+  player.stamina += stD; player.speed += spD; player.endurance += enD;
   savePlayer(); updateHUD();
 
-  // UI
-  document.getElementById('sum-dist').textContent=run.distance.toFixed(2);
-  document.getElementById('sum-time').textContent=formatDuration(run.duration);
-  document.getElementById('sum-pace').textContent=run.distance>0.05&&run.duration>0?formatPace(run.duration/run.distance):'--:--';
-  document.getElementById('xp-gain-amount').textContent=`+${xpEarned} XP`;
-  document.getElementById('xp-bar-current').textContent=`${player.xp} XP`;
-  document.getElementById('xp-bar-next').textContent=`${xpForLevel(player.level)-player.xp} XP to next level`;
-  document.getElementById('delta-stamina').textContent=`+${stD}`;
-  document.getElementById('delta-speed').textContent=`+${spD}`;
-  document.getElementById('delta-endurance').textContent=`+${enD}`;
-  ['bar-stamina','bar-speed','bar-endurance'].forEach(id=>document.getElementById(id).style.width='0%');
-  document.querySelectorAll('.stat-row-delta').forEach(d=>d.classList.remove('show'));
-  document.getElementById('xp-full-fill').style.width='0%';
+  document.getElementById('sum-dist').textContent = run.distance.toFixed(2);
+  document.getElementById('sum-time').textContent = formatDuration(run.duration);
+  document.getElementById('sum-pace').textContent = (run.distance > 0.05 && run.duration > 0) ? formatPace(run.duration / run.distance) : '--:--';
+  document.getElementById('xp-amount').textContent = '+' + xpEarned + ' XP';
+  var needed = xpForLevel(player.level);
+  document.getElementById('xp-cur').textContent = player.xp + ' XP';
+  document.getElementById('xp-nxt').textContent = (needed - player.xp) + ' XP to next level';
+  document.getElementById('d-stamina').textContent = '+' + stD;
+  document.getElementById('d-speed').textContent = '+' + spD;
+  document.getElementById('d-endurance').textContent = '+' + enD;
 
-  if(leveled){document.getElementById('levelup-num').textContent=`LV. ${player.level}`;document.getElementById('levelup-banner').classList.add('show');}
-  else document.getElementById('levelup-banner').classList.remove('show');
+  document.getElementById('si-stamina').style.width = '0%';
+  document.getElementById('si-speed').style.width = '0%';
+  document.getElementById('si-endurance').style.width = '0%';
+  document.getElementById('xp-bar-inner').style.width = '0%';
+  document.querySelectorAll('.si-delta').forEach(function(d) { d.classList.remove('show'); });
 
-  // Chests
-  const chests=[{tier:'common'}];
-  if(run.distance>=3) chests.push({tier:'rare'});
-  if(run.distance>=7) chests.push({tier:'epic'});
-  const chestIcons={common:'📦',rare:'💙',epic:'💜'};
-  const chestRow=document.getElementById('chest-row');
-  chestRow.innerHTML='';
-  chests.forEach(c=>{
-    const el=document.createElement('div');
-    el.className=`chest ${c.tier}`;
-    el.innerHTML=`<div class="chest-lock">🔒</div><div class="chest-pixel">${chestIcons[c.tier]}</div><div class="chest-tier">${c.tier}</div>`;
-    el.onclick=()=>{
-      if(el.classList.contains('opened')) return;
+  if (leveled) {
+    document.getElementById('lu-num').textContent = 'LV. ' + player.level;
+    document.getElementById('levelup').classList.add('show');
+  } else {
+    document.getElementById('levelup').classList.remove('show');
+  }
+
+  var chests = [{ tier:'common' }];
+  if (run.distance >= 3) chests.push({ tier:'rare' });
+  if (run.distance >= 7) chests.push({ tier:'epic' });
+  var icons = { common:'📦', rare:'💙', epic:'💜' };
+  var row = document.getElementById('chest-row');
+  row.innerHTML = '';
+  chests.forEach(function(c) {
+    var el = document.createElement('div');
+    el.className = 'chest ' + c.tier;
+    el.innerHTML = '<div class="chest-lock">🔒</div><div class="chest-pixel">' + icons[c.tier] + '</div><div class="chest-tier">' + c.tier + '</div>';
+    el.onclick = function() {
+      if (el.classList.contains('opened')) return;
       el.classList.add('opened');
-      const lk=el.querySelector('.chest-lock'); if(lk) lk.remove();
-      pendingReward=pickReward(run.distance);
+      var lk = el.querySelector('.chest-lock'); if (lk) lk.remove();
+      pendingReward = pickReward(run.distance);
       showRewardPopup(pendingReward);
     };
-    chestRow.appendChild(el);
+    row.appendChild(el);
   });
 
-  const overlay=document.getElementById('post-run-overlay');
-  overlay.classList.add('show'); overlay.scrollTop=0;
+  var overlay = document.getElementById('post-run-overlay');
+  overlay.classList.add('show'); overlay.scrollTop = 0;
 
-  ['sys-notif','summary-stats','xp-gain-section','stat-increases','chest-section','post-run-dismiss'].forEach(id=>document.getElementById(id).classList.remove('appear'));
-  document.getElementById('xp-gain-amount').classList.remove('pop');
+  var ids = ['sys-notif','sum-stats','xp-section','stat-inc','chest-section','pr-dismiss'];
+  ids.forEach(function(id) { document.getElementById(id).classList.remove('appear'); });
+  document.getElementById('xp-amount').classList.remove('pop');
 
-  setTimeout(()=>document.getElementById('sys-notif').classList.add('appear'),80);
-  setTimeout(()=>document.getElementById('summary-stats').classList.add('appear'),280);
-  setTimeout(()=>{document.getElementById('xp-gain-section').classList.add('appear');document.getElementById('xp-gain-amount').classList.add('pop');setTimeout(()=>{const n=xpForLevel(player.level);document.getElementById('xp-full-fill').style.width=Math.min(100,(player.xp/n)*100)+'%';},200);},480);
-  setTimeout(()=>{document.getElementById('stat-increases').classList.add('appear');setTimeout(()=>{document.getElementById('bar-stamina').style.width=Math.min(100,player.stamina/2)+'%';document.getElementById('bar-speed').style.width=Math.min(100,player.speed/2)+'%';document.getElementById('bar-endurance').style.width=Math.min(100,player.endurance/2)+'%';document.querySelectorAll('.stat-row-delta').forEach(d=>d.classList.add('show'));},180);},680);
-  setTimeout(()=>document.getElementById('chest-section').classList.add('appear'),980);
-  setTimeout(()=>document.getElementById('post-run-dismiss').classList.add('appear'),1750);
+  setTimeout(function() { document.getElementById('sys-notif').classList.add('appear'); }, 80);
+  setTimeout(function() { document.getElementById('sum-stats').classList.add('appear'); }, 280);
+  setTimeout(function() {
+    document.getElementById('xp-section').classList.add('appear');
+    document.getElementById('xp-amount').classList.add('pop');
+    setTimeout(function() {
+      document.getElementById('xp-bar-inner').style.width = Math.min(100, (player.xp / xpForLevel(player.level)) * 100) + '%';
+    }, 200);
+  }, 480);
+  setTimeout(function() {
+    document.getElementById('stat-inc').classList.add('appear');
+    setTimeout(function() {
+      document.getElementById('si-stamina').style.width = Math.min(100, player.stamina / 2) + '%';
+      document.getElementById('si-speed').style.width = Math.min(100, player.speed / 2) + '%';
+      document.getElementById('si-endurance').style.width = Math.min(100, player.endurance / 2) + '%';
+      document.querySelectorAll('.si-delta').forEach(function(d) { d.classList.add('show'); });
+    }, 180);
+  }, 680);
+  setTimeout(function() { document.getElementById('chest-section').classList.add('appear'); }, 980);
+  setTimeout(function() { document.getElementById('pr-dismiss').classList.add('appear'); }, 1750);
 }
 
 function showRewardPopup(reward) {
-  const box=document.getElementById('reward-box');
-  box.className=`reward-box ${reward.tier}`;
-  document.getElementById('reward-rarity').textContent=reward.tier.charAt(0).toUpperCase()+reward.tier.slice(1);
-  document.getElementById('reward-rarity').className=`reward-rarity ${reward.tier}`;
-  document.getElementById('reward-icon').textContent=reward.icon;
-  document.getElementById('reward-name').textContent=reward.name;
-  document.getElementById('reward-desc').textContent=reward.desc;
+  var box = document.getElementById('reward-box');
+  box.className = 'reward-box ' + reward.tier;
+  var rt = document.getElementById('reward-rarity');
+  rt.textContent = reward.tier.charAt(0).toUpperCase() + reward.tier.slice(1);
+  rt.className = 'rarity-tag ' + reward.tier;
+  document.getElementById('reward-icon').textContent = reward.icon;
+  document.getElementById('reward-name').textContent = reward.name;
+  document.getElementById('reward-desc').textContent = reward.desc;
   document.getElementById('reward-popup').classList.add('show');
 }
 
 function closeRewardAndSave() {
-  if(pendingReward){
+  if (pendingReward) {
     player.inventory.push(pendingReward);
     savePlayer();
-    showToast(`${pendingReward.name} added to inventory!`);
-    pendingReward=null;
+    showToast(pendingReward.name + ' added to inventory!');
+    pendingReward = null;
   }
   document.getElementById('reward-popup').classList.remove('show');
 }
@@ -1232,15 +1019,15 @@ function dismissPostRun() {
   document.getElementById('post-run-overlay').classList.remove('show');
 }
 
-// ══════════════════════════════════════════════
-// PROFILE SCREEN
-// ══════════════════════════════════════════════
-function refreshProfileTab() {
-  const needed = xpForLevel(player.level);
-  const pct = Math.min(100, (player.xp / needed) * 100);
-  document.getElementById('p-lv-badge').textContent = `LV. ${player.level}`;
+// ════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════
+function refreshProfile() {
+  var needed = xpForLevel(player.level);
+  var pct = Math.min(100, (player.xp / needed) * 100);
+  document.getElementById('p-lv').textContent = 'LV. ' + player.level;
   document.getElementById('p-xp-fill').style.width = pct + '%';
-  document.getElementById('p-xp-text').textContent = `${player.xp} / ${needed} XP`;
+  document.getElementById('p-xp-text').textContent = player.xp + ' / ' + needed + ' XP';
   document.getElementById('player-name-input').value = player.name || 'Runner';
   document.getElementById('p-bar-stamina').style.width = Math.min(100, player.stamina / 2) + '%';
   document.getElementById('p-bar-speed').style.width = Math.min(100, player.speed / 2) + '%';
@@ -1248,237 +1035,289 @@ function refreshProfileTab() {
   document.getElementById('p-val-stamina').textContent = player.stamina;
   document.getElementById('p-val-speed').textContent = player.speed;
   document.getElementById('p-val-endurance').textContent = player.endurance;
-  // Avatar
-  const outfit = player.equipped.outfit;
-  const head = player.equipped.head;
-  const acc = player.equipped.accessory;
-  document.getElementById('p-avatar-outfit').textContent = outfit ? outfit.icon : '🧍';
-  const badges = document.getElementById('p-avatar-badges');
+
+  var outfit = player.equipped.outfit;
+  var head   = player.equipped.head;
+  var acc    = player.equipped.accessory;
+  document.getElementById('p-avatar-icon').textContent = outfit ? outfit.icon : '🧍';
+  var badges = document.getElementById('p-avatar-badges');
   badges.innerHTML = '';
-  if(head){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=head.icon; badges.appendChild(b); }
-  if(acc){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=acc.icon; badges.appendChild(b); }
-  // Totals
-  getAllRuns().then(runs => {
-    document.getElementById('p-total-runs').textContent = runs.length;
-    document.getElementById('p-total-km').textContent = runs.reduce((s,r)=>s+r.distance,0).toFixed(1);
-    document.getElementById('p-total-xp').textContent = player.totalXp;
+  if (head) { var b1 = document.createElement('div'); b1.className = 'equip-badge'; b1.textContent = head.icon; badges.appendChild(b1); }
+  if (acc)  { var b2 = document.createElement('div'); b2.className = 'equip-badge'; b2.textContent = acc.icon;  badges.appendChild(b2); }
+
+  getAllRuns().then(function(runs) {
+    document.getElementById('p-runs').textContent = runs.length;
+    document.getElementById('p-km').textContent = runs.reduce(function(s,r) { return s + r.distance; }, 0).toFixed(1);
+    document.getElementById('p-xp').textContent = player.totalXp;
   });
 }
 
-function openProfile() { switchTab('profile'); }
-
-function closeProfile() { switchTab('record'); }
-
 function saveName() {
-  player.name=document.getElementById('player-name-input').value||'Runner';
+  player.name = document.getElementById('player-name-input').value || 'Runner';
   savePlayer();
 }
 
-function updateAvatar() {
-  // Show equipped outfit in avatar, badges for accessories + head
-  const outfit = player.equipped.outfit;
-  const head = player.equipped.head;
-  const acc = player.equipped.accessory;
-  document.getElementById('avatar-outfit').textContent = outfit ? outfit.icon : '🧍';
-  const badges = document.getElementById('avatar-badges');
-  badges.innerHTML = '';
-  if(head){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=head.icon; badges.appendChild(b); }
-  if(acc){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=acc.icon; badges.appendChild(b); }
-}
-
-// ══════════════════════════════════════════════
-// INVENTORY SCREEN
-// ══════════════════════════════════════════════
-let invFilter = 'all';
-let currentItemDetail = null;
+// ════════════════════════════════════════
+// INVENTORY
+// ════════════════════════════════════════
+var invFilter = 'all';
+var currentItem = null;
 
 function openInventory() {
   refreshEquipSlots();
-  renderInventoryGrid(invFilter);
+  renderGrid(invFilter);
   document.getElementById('inventory-screen').classList.add('show');
 }
 
 function closeInventory() {
   document.getElementById('inventory-screen').classList.remove('show');
-  refreshProfileTab();
+  refreshProfile();
 }
 
 function refreshEquipSlots() {
-  ['head','outfit','accessory'].forEach(slot=>{
-    const item=player.equipped[slot];
-    const iconEl=document.getElementById(`slot-${slot}-icon`);
-    const nameEl=document.getElementById(`slot-${slot}-name`);
-    const slotEl=document.getElementById(`slot-${slot}`);
-    const defaults={head:'🪖',outfit:'👕',accessory:'💍'};
-    if(item){ iconEl.textContent=item.icon; nameEl.textContent=item.name; slotEl.classList.add('filled'); }
-    else { iconEl.textContent=defaults[slot]; nameEl.textContent='Empty'; slotEl.classList.remove('filled'); }
+  var defaults = { head:'🪖', outfit:'👕', accessory:'💍' };
+  ['head','outfit','accessory'].forEach(function(slot) {
+    var item = player.equipped[slot];
+    document.getElementById('slot-' + slot + '-icon').textContent = item ? item.icon : defaults[slot];
+    document.getElementById('slot-' + slot + '-name').textContent = item ? item.name : 'Empty';
+    document.getElementById('slot-' + slot).classList.toggle('filled', !!item);
   });
 }
 
 function filterInv(filter, btn) {
-  invFilter=filter;
-  document.querySelectorAll('.inv-filter-btn').forEach(b=>b.classList.remove('active'));
+  invFilter = filter;
+  document.querySelectorAll('.inv-filter-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  renderInventoryGrid(filter);
+  renderGrid(filter);
 }
 
-function renderInventoryGrid(filter) {
-  const grid=document.getElementById('inv-grid');
-  let items=player.inventory;
+function renderGrid(filter) {
+  var grid = document.getElementById('inv-grid');
+  var items = player.inventory.slice();
+  if (filter === 'all') {}
+  else if (['head','outfit','accessory'].indexOf(filter) >= 0) items = items.filter(function(i) { return i.slot === filter; });
+  else items = items.filter(function(i) { return i.tier === filter; });
 
-  if(filter==='all') { /* show all */ }
-  else if(['head','outfit','accessory'].includes(filter)) items=items.filter(i=>i.slot===filter);
-  else items=items.filter(i=>i.tier===filter); // rarity filter
-
-  if(!items.length){
-    grid.innerHTML=`<div class="inv-empty" style="grid-column:1/-1"><span class="inv-empty-icon">🎒</span>${filter==='all'?'No items yet.<br>Complete runs to earn rewards.':'No items in this category.'}</div>`;
+  if (!items.length) {
+    grid.innerHTML = '<div class="inv-empty"><span class="inv-empty-icon">🎒</span>' + (filter === 'all' ? 'No items yet.<br>Complete runs to earn rewards.' : 'No items in this category.') + '</div>';
     return;
   }
-
-  grid.innerHTML='';
-  items.forEach(item=>{
-    const isEquipped=player.equipped[item.slot]&&player.equipped[item.slot].uid===item.uid;
-    const el=document.createElement('div');
-    el.className=`inv-item rarity-${item.tier}${isEquipped?' equipped':''}`;
-    el.innerHTML=`
-      ${isEquipped?'<div class="inv-equipped-tag">✓</div>':''}
-      <div class="inv-item-icon">${item.icon}</div>
-      <div class="inv-item-name">${item.name}</div>
-      <div class="inv-item-rarity-dot ${item.tier}"></div>`;
-    el.onclick=()=>openItemDetail(item);
+  grid.innerHTML = '';
+  items.forEach(function(item) {
+    var isEq = player.equipped[item.slot] && player.equipped[item.slot].uid === item.uid;
+    var el = document.createElement('div');
+    el.className = 'inv-item rarity-' + item.tier + (isEq ? ' equipped' : '');
+    el.innerHTML = (isEq ? '<div class="inv-equipped-tag">✓</div>' : '') +
+      '<div class="inv-item-icon">' + item.icon + '</div>' +
+      '<div class="inv-item-name">' + item.name + '</div>' +
+      '<div class="inv-rarity-dot ' + item.tier + '"></div>';
+    el.onclick = function() { openItemDetail(item); };
     grid.appendChild(el);
   });
 }
 
 function openItemDetail(item) {
-  currentItemDetail=item;
-  const box=document.getElementById('item-detail-box');
-  box.className=`item-detail-box ${item.tier}`;
-  document.getElementById('item-detail-rarity').textContent=item.tier.charAt(0).toUpperCase()+item.tier.slice(1);
-  document.getElementById('item-detail-rarity').className=`item-detail-rarity ${item.tier}`;
-  document.getElementById('item-detail-icon').textContent=item.icon;
-  document.getElementById('item-detail-name').textContent=item.name;
-  document.getElementById('item-detail-slot').textContent=`${item.slot.charAt(0).toUpperCase()+item.slot.slice(1)} Slot`;
-  document.getElementById('item-detail-desc').textContent=item.desc;
-  const isEquipped=player.equipped[item.slot]&&player.equipped[item.slot].uid===item.uid;
-  const equipBtn=document.getElementById('item-equip-btn');
-  if(isEquipped){ equipBtn.textContent='Unequip'; equipBtn.className='btn danger'; }
-  else { equipBtn.textContent='Equip'; equipBtn.className='btn primary'; }
-  document.getElementById('item-detail-popup').classList.add('show');
+  currentItem = item;
+  var box = document.getElementById('item-detail-box');
+  box.className = 'item-detail-box ' + item.tier;
+  var r = document.getElementById('item-detail-rarity');
+  r.textContent = item.tier.charAt(0).toUpperCase() + item.tier.slice(1);
+  r.className = 'item-detail-rarity ' + item.tier;
+  document.getElementById('item-detail-icon').textContent = item.icon;
+  document.getElementById('item-detail-name').textContent = item.name;
+  document.getElementById('item-detail-slot').textContent = item.slot.charAt(0).toUpperCase() + item.slot.slice(1) + ' Slot';
+  document.getElementById('item-detail-desc').textContent = item.desc;
+  var isEq = player.equipped[item.slot] && player.equipped[item.slot].uid === item.uid;
+  var btn = document.getElementById('item-equip-btn');
+  btn.textContent = isEq ? 'Unequip' : 'Equip';
+  btn.className = isEq ? 'btn danger' : 'btn primary';
+  document.getElementById('item-detail').classList.add('show');
 }
 
 function openSlotDetail(slot) {
-  const item=player.equipped[slot];
-  if(item) openItemDetail(item);
-  else showToast(`${slot.charAt(0).toUpperCase()+slot.slice(1)} slot is empty`);
+  var item = player.equipped[slot];
+  if (item) openItemDetail(item);
+  else showToast(slot.charAt(0).toUpperCase() + slot.slice(1) + ' slot is empty');
 }
 
 function equipCurrentItem() {
-  if(!currentItemDetail) return;
-  const item=currentItemDetail;
-  const isEquipped=player.equipped[item.slot]&&player.equipped[item.slot].uid===item.uid;
-  if(isEquipped){ player.equipped[item.slot]=null; showToast(`${item.name} unequipped`); }
-  else { player.equipped[item.slot]=item; showToast(`${item.name} equipped!`); }
+  if (!currentItem) return;
+  var isEq = player.equipped[currentItem.slot] && player.equipped[currentItem.slot].uid === currentItem.uid;
+  if (isEq) { player.equipped[currentItem.slot] = null; showToast(currentItem.name + ' unequipped'); }
+  else       { player.equipped[currentItem.slot] = currentItem; showToast(currentItem.name + ' equipped!'); }
   savePlayer();
   closeItemDetail();
   refreshEquipSlots();
-  renderInventoryGrid(invFilter);
+  renderGrid(invFilter);
 }
 
 function closeItemDetail() {
-  document.getElementById('item-detail-popup').classList.remove('show');
-  currentItemDetail=null;
+  document.getElementById('item-detail').classList.remove('show');
+  currentItem = null;
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // HISTORY
-// ══════════════════════════════════════════════
-async function loadHistory() {
-  const runs=await getAllRuns();
-  const el=document.getElementById('history-list');
-  const empty=document.getElementById('history-empty');
-  if(!runs.length){empty.style.display='block';el.innerHTML='';el.appendChild(empty);return;}
-  el.innerHTML='';
-  runs.forEach(run=>{
-    const xp=calcXP(run.distance);
-    const pace=run.duration>0&&run.distance>0.05?formatPace(run.duration/run.distance):'--:--';
-    const card=document.createElement('div');
-    card.className='run-card'+(run.id===state.selectedRunId?' selected':'');
-    card.innerHTML=`
-      <div class="run-card-header"><div class="run-card-date">${formatDate(run.date)}</div><div class="run-card-xp">+${xp} XP</div></div>
-      <div class="run-card-metrics">
-        <div><div class="run-metric-label">Distance</div><div class="run-metric-val">${run.distance.toFixed(2)}</div><div style="font-size:7px;color:var(--text-muted);letter-spacing:0.08em">km</div></div>
-        <div><div class="run-metric-label">Time</div><div class="run-metric-val">${formatDuration(run.duration)}</div></div>
-        <div><div class="run-metric-label">Pace</div><div class="run-metric-val">${pace}</div><div style="font-size:7px;color:var(--text-muted);letter-spacing:0.08em">min/km</div></div>
-      </div>
-      <div class="run-card-actions">
-        <button class="mini-btn" onclick="viewRun(${run.id})">View</button>
-        <button class="mini-btn" onclick="exportRunCSV(${run.id})">CSV</button>
-        <button class="mini-btn" onclick="exportRunGPX(${run.id})">GPX</button>
-        <button class="mini-btn del" onclick="confirmDelete(${run.id})">Delete</button>
-      </div>`;
-    el.appendChild(card);
+// ════════════════════════════════════════
+function loadHistory() {
+  getAllRuns().then(function(runs) {
+    var el = document.getElementById('history-list');
+    var empty = document.getElementById('history-empty');
+    if (!runs.length) { empty.style.display = 'block'; el.innerHTML = ''; el.appendChild(empty); return; }
+    el.innerHTML = '';
+    runs.forEach(function(run) {
+      var xp = calcXP(run.distance);
+      var pace = (run.duration > 0 && run.distance > 0.05) ? formatPace(run.duration / run.distance) : '--:--';
+      var card = document.createElement('div');
+      card.className = 'run-card' + (run.id === state.selectedRunId ? ' selected' : '');
+      card.innerHTML =
+        '<div class="run-card-header"><div class="run-card-date">' + formatDate(run.date) + '</div><div class="run-card-xp">+' + xp + ' XP</div></div>' +
+        '<div class="run-card-metrics">' +
+          '<div><div class="run-metric-label">Distance</div><div class="run-metric-val">' + run.distance.toFixed(2) + '</div><div style="font-size:7px;color:var(--text-muted)">km</div></div>' +
+          '<div><div class="run-metric-label">Time</div><div class="run-metric-val">' + formatDuration(run.duration) + '</div></div>' +
+          '<div><div class="run-metric-label">Pace</div><div class="run-metric-val">' + pace + '</div><div style="font-size:7px;color:var(--text-muted)">min/km</div></div>' +
+        '</div>' +
+        '<div class="run-card-actions">' +
+          '<button class="mini-btn" onclick="viewRun(' + run.id + ')">View</button>' +
+          '<button class="mini-btn" onclick="exportRunCSV(' + run.id + ')">CSV</button>' +
+          '<button class="mini-btn" onclick="exportRunGPX(' + run.id + ')">GPX</button>' +
+          '<button class="mini-btn del" onclick="confirmDelete(' + run.id + ')">Delete</button>' +
+        '</div>';
+      el.appendChild(card);
+    });
   });
 }
 
-async function viewRun(id) {
-  const runs=await getAllRuns(); const run=runs.find(r=>r.id===id);
-  if(!run||!run.coords.length) return;
-  state.selectedRunId=id; switchTab('record');
-  if(historyLine) map.removeLayer(historyLine);
-  if(startMarker){map.removeLayer(startMarker);startMarker=null;}
-  if(endMarker){map.removeLayer(endMarker);endMarker=null;}
-  historyLine=L.polyline(run.coords,{color:'#a8ff3e',weight:4,opacity:0.85}).addTo(map);
-  map.fitBounds(historyLine.getBounds(),{padding:[40,40]});
-  startMarker=L.circleMarker(run.coords[0],{radius:7,color:'#fff',fillColor:'#fff',fillOpacity:0.9,weight:2}).addTo(map).bindTooltip('Start');
-  endMarker=L.circleMarker(run.coords[run.coords.length-1],{radius:7,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:1,weight:2}).addTo(map).bindTooltip('Finish');
-  document.getElementById('display-time').textContent=formatDuration(run.duration);
-  document.getElementById('display-dist').textContent=run.distance.toFixed(2);
-  if(run.distance>0.05&&run.duration>0){document.getElementById('display-pace').textContent=formatPace(run.duration/run.distance);document.getElementById('display-speed').textContent=(run.distance/(run.duration/3600)).toFixed(1);}
-  document.getElementById('display-pts').textContent=run.coords.length;
-  document.getElementById('route-info').textContent=`Viewing saved run · ${formatDate(run.date)}`;
+function viewRun(id) {
+  getAllRuns().then(function(runs) {
+    var run = runs.find(function(r) { return r.id === id; });
+    if (!run || !run.coords.length) return;
+    state.selectedRunId = id;
+    switchTab('record');
+    if (historyLine) map.removeLayer(historyLine);
+    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+    if (endMarker)   { map.removeLayer(endMarker);   endMarker = null; }
+    historyLine = L.polyline(run.coords, { color:'#a8ff3e', weight:4, opacity:0.85 }).addTo(map);
+    map.fitBounds(historyLine.getBounds(), { padding:[40,40] });
+    startMarker = L.circleMarker(run.coords[0], { radius:7, color:'#fff', fillColor:'#fff', fillOpacity:0.9, weight:2 }).addTo(map).bindTooltip('Start');
+    endMarker   = L.circleMarker(run.coords[run.coords.length-1], { radius:7, color:'#a8ff3e', fillColor:'#a8ff3e', fillOpacity:1, weight:2 }).addTo(map).bindTooltip('Finish');
+    document.getElementById('display-time').textContent = formatDuration(run.duration);
+    document.getElementById('display-dist').textContent = run.distance.toFixed(2);
+    if (run.distance > 0.05 && run.duration > 0) {
+      document.getElementById('display-pace').textContent = formatPace(run.duration / run.distance);
+      document.getElementById('display-speed').textContent = (run.distance / (run.duration / 3600)).toFixed(1);
+    }
+    document.getElementById('display-pts').textContent = run.coords.length;
+    document.getElementById('route-info').textContent = 'Viewing saved run · ' + formatDate(run.date);
+  });
 }
 
-async function confirmDelete(id) {
-  if(!confirm('Delete this run?')) return;
-  await deleteRun(id); showToast('Run deleted'); loadHistory();
-  if(state.selectedRunId===id){if(historyLine){map.removeLayer(historyLine);historyLine=null;}if(startMarker){map.removeLayer(startMarker);startMarker=null;}if(endMarker){map.removeLayer(endMarker);endMarker=null;}state.selectedRunId=null;}
+function confirmDelete(id) {
+  if (!confirm('Delete this run?')) return;
+  deleteRun(id).then(function() {
+    showToast('Run deleted'); loadHistory();
+    if (state.selectedRunId === id) {
+      if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
+      if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+      if (endMarker)   { map.removeLayer(endMarker);   endMarker = null; }
+      state.selectedRunId = null;
+    }
+  });
 }
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // EXPORT
-// ══════════════════════════════════════════════
-async function exportRunCSV(id) { const runs=await getAllRuns();const run=runs.find(r=>r.id===id);if(!run)return;const rows=[['lat','lng','point']];run.coords.forEach((c,i)=>rows.push([c[0],c[1],i+1]));downloadFile(rowsToCSV(rows),`stride_run_${id}.csv`,'text/csv'); }
-async function exportRunGPX(id) { const runs=await getAllRuns();const run=runs.find(r=>r.id===id);if(!run)return;downloadFile(toGPX(run),`stride_run_${id}.gpx`,'application/gpx+xml'); }
-async function exportAllCSV() { const runs=await getAllRuns();if(!runs.length){showToast('No runs to export');return;}const rows=[['id','date','duration_s','distance_km','pace_min_per_km']];runs.forEach(r=>rows.push([r.id,r.date,r.duration,r.distance.toFixed(4),r.duration&&r.distance>0?(r.duration/r.distance/60).toFixed(4):'']));downloadFile(rowsToCSV(rows),'stride_all_runs.csv','text/csv');showToast('CSV exported'); }
-async function exportAllGPX() { const runs=await getAllRuns();if(!runs.length){showToast('No runs to export');return;}const tracks=runs.map(r=>toGPX(r,false)).join('\n');downloadFile(`<?xml version="1.0"?><gpx version="1.1" creator="Stride">${tracks}</gpx>`,'stride_all_runs.gpx','application/gpx+xml');showToast('GPX exported'); }
-function toGPX(run,wrap=true){const pts=run.coords.map(c=>`<trkpt lat="${c[0]}" lon="${c[1]}"></trkpt>`).join('');const trk=`<trk><n>Run ${run.id||''} ${run.date}</n><trkseg>${pts}</trkseg></trk>`;return wrap?`<?xml version="1.0"?><gpx version="1.1" creator="Stride">${trk}</gpx>`:trk;}
-function rowsToCSV(rows){return rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');}
-function downloadFile(content,filename,mime){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:mime}));a.download=filename;a.click();}
+// ════════════════════════════════════════
+function exportRunCSV(id) {
+  getAllRuns().then(function(runs) {
+    var run = runs.find(function(r) { return r.id === id; }); if (!run) return;
+    var rows = [['lat','lng','point']];
+    run.coords.forEach(function(c,i) { rows.push([c[0],c[1],i+1]); });
+    downloadFile(rowsToCSV(rows), 'stride_run_' + id + '.csv', 'text/csv');
+  });
+}
+function exportRunGPX(id) {
+  getAllRuns().then(function(runs) {
+    var run = runs.find(function(r) { return r.id === id; }); if (!run) return;
+    downloadFile(toGPX(run), 'stride_run_' + id + '.gpx', 'application/gpx+xml');
+  });
+}
+function exportAllCSV() {
+  getAllRuns().then(function(runs) {
+    if (!runs.length) { showToast('No runs to export'); return; }
+    var rows = [['id','date','duration_s','distance_km','pace_min_per_km']];
+    runs.forEach(function(r) { rows.push([r.id, r.date, r.duration, r.distance.toFixed(4), r.duration && r.distance > 0 ? (r.duration/r.distance/60).toFixed(4) : '']); });
+    downloadFile(rowsToCSV(rows), 'stride_all_runs.csv', 'text/csv');
+    showToast('CSV exported');
+  });
+}
+function exportAllGPX() {
+  getAllRuns().then(function(runs) {
+    if (!runs.length) { showToast('No runs to export'); return; }
+    var tracks = runs.map(function(r) { return toGPX(r, false); }).join('\n');
+    downloadFile('<?xml version="1.0"?><gpx version="1.1" creator="Stride">' + tracks + '</gpx>', 'stride_all_runs.gpx', 'application/gpx+xml');
+    showToast('GPX exported');
+  });
+}
+function toGPX(run, wrap) {
+  var pts = run.coords.map(function(c) { return '<trkpt lat="' + c[0] + '" lon="' + c[1] + '"></trkpt>'; }).join('');
+  var trk = '<trk><n>Run ' + (run.id||'') + ' ' + run.date + '</n><trkseg>' + pts + '</trkseg></trk>';
+  return (wrap !== false) ? '<?xml version="1.0"?><gpx version="1.1" creator="Stride">' + trk + '</gpx>' : trk;
+}
+function rowsToCSV(rows) { return rows.map(function(r) { return r.map(function(v) { return '"' + v + '"'; }).join(','); }).join('\n'); }
+function downloadFile(content, filename, mime) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type:mime }));
+  a.download = filename; a.click();
+}
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // UTILS
-// ══════════════════════════════════════════════
-function haversine(lat1,lon1,lat2,lon2){const R=6371,dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
-function rad(d){return d*Math.PI/180;}
-function formatDuration(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return `${pad(h)}:${pad(m)}:${pad(sec)}`;}
-function formatPace(sPerKm){const m=Math.floor(sPerKm/60),s=Math.round(sPerKm%60);return `${m}:${pad(s)}`;}
-function formatDate(iso){const d=new Date(iso);return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});}
-function pad(n){return String(n).padStart(2,'0');}
-function setStatus(type,text){document.getElementById('status-dot').className='dot '+type;document.getElementById('status-text').textContent=text;}
-function showBadges(show){document.getElementById('map-badge-dist').style.display=show?'block':'none';document.getElementById('map-badge-pace').style.display=show?'block':'none';}
-let toastTimer;
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+// ════════════════════════════════════════
+function haversine(lat1, lon1, lat2, lon2) {
+  var R = 6371, dLat = rad(lat2-lat1), dLon = rad(lon2-lon1);
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function rad(d) { return d * Math.PI / 180; }
+function formatDuration(s) {
+  var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return pad(h) + ':' + pad(m) + ':' + pad(sec);
+}
+function formatPace(sPerKm) {
+  var m = Math.floor(sPerKm/60), s = Math.round(sPerKm%60);
+  return m + ':' + pad(s);
+}
+function formatDate(iso) {
+  var d = new Date(iso);
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) + ' · ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+function setStatus(type, text) {
+  document.getElementById('status-dot').className = 'dot ' + type;
+  document.getElementById('status-text').textContent = text;
+}
+function showBadges(show) {
+  document.getElementById('map-badge-dist').style.display = show ? 'block' : 'none';
+  document.getElementById('map-badge-pace').style.display = show ? 'block' : 'none';
+}
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
 
-// ══════════════════════════════════════════════
+// ════════════════════════════════════════
 // INIT
-// ══════════════════════════════════════════════
-openDB().then(()=>{
+// ════════════════════════════════════════
+openDB().then(function() {
   updateHUD();
-  getAllRuns().then(runs=>{
-    if(runs.length>0)
-      document.getElementById('route-info').textContent=
-        `${runs.length} run${runs.length>1?'s':''} logged · LV. ${player.level} · ${player.totalXp} total XP`;
+  getAllRuns().then(function(runs) {
+    if (runs.length > 0) {
+      document.getElementById('route-info').textContent = runs.length + ' run' + (runs.length > 1 ? 's' : '') + ' logged · LV. ' + player.level + ' · ' + player.totalXp + ' total XP';
+    }
   });
 });
 </script>
