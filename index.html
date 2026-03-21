@@ -570,6 +570,7 @@ body::after {
     <div id="tabs">
       <button class="tab active" onclick="switchTab('record')">Record</button>
       <button class="tab" onclick="switchTab('history')">History</button>
+      <button class="tab" onclick="switchTab('profile')">Profile</button>
     </div>
 
     <!-- RECORD TAB -->
@@ -633,6 +634,78 @@ body::after {
       <div id="export-bar">
         <button class="btn" onclick="exportAllCSV()" style="font-size:10px">Export CSV</button>
         <button class="btn" onclick="exportAllGPX()" style="font-size:10px">Export GPX</button>
+      </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div id="tab-profile" class="tab-content">
+      <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
+        <div style="padding:16px 16px 32px;">
+
+          <!-- Avatar + name -->
+          <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px;padding-top:4px;">
+            <div id="p-avatar-frame" style="width:90px;height:90px;border:1px solid var(--border2);border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:52px;margin-bottom:12px;position:relative;box-shadow:0 0 18px rgba(0,0,0,0.4);">
+              <span id="p-avatar-outfit">🧍</span>
+              <div id="p-avatar-badges" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
+              <input id="player-name-input" type="text" value="Runner" maxlength="16" oninput="saveName()"
+                style="font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text);background:none;border:none;border-bottom:1px solid var(--border2);text-align:center;letter-spacing:0.04em;padding:2px 5px;width:160px;transition:border-color 0.2s;"
+                onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='var(--border2)'" />
+              <button onclick="document.getElementById('player-name-input').focus()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:3px;">✎</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;width:100%;max-width:240px;margin-bottom:4px;">
+              <div style="font-family:var(--font-display);font-size:10px;font-weight:700;color:var(--accent);text-shadow:0 0 8px var(--accent-glow);white-space:nowrap;" id="p-lv-badge">LV. 1</div>
+              <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-xp-fill" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);width:0%"></div></div>
+            </div>
+            <div id="p-xp-text" style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.07em;">0 / 100 XP</div>
+          </div>
+
+          <!-- Stat bars -->
+          <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.22em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">[ Attributes ]</div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
+            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Stamina</div>
+            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-stamina" style="height:100%;background:linear-gradient(90deg,#4fc3f7,#81d4fa);border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px rgba(79,195,247,0.3);"></div></div>
+            <div id="p-val-stamina" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
+            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Speed</div>
+            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-speed" style="height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px var(--accent-glow);"></div></div>
+            <div id="p-val-speed" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:18px;">
+            <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:0.08em;color:var(--text-dim);text-transform:uppercase;min-width:76px;">Endurance</div>
+            <div style="flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden;"><div id="p-bar-endurance" style="height:100%;background:linear-gradient(90deg,#b39ddb,#ce93d8);border-radius:2px;width:0%;transition:width 0.8s ease;box-shadow:0 0 5px rgba(179,157,219,0.3);"></div></div>
+            <div id="p-val-endurance" style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);min-width:28px;text-align:right;">10</div>
+          </div>
+
+          <!-- Totals -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-bottom:18px;">
+            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
+              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Runs</div>
+              <div id="p-total-runs" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0</div>
+            </div>
+            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
+              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total km</div>
+              <div id="p-total-km" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0.0</div>
+            </div>
+            <div style="background:var(--surface);padding:11px 8px;text-align:center;">
+              <div style="font-family:var(--font-mono);font-size:7px;letter-spacing:0.12em;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total XP</div>
+              <div id="p-total-xp" style="font-family:var(--font-display);font-size:18px;font-weight:300;color:var(--text);">0</div>
+            </div>
+          </div>
+
+          <!-- Nav buttons -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button onclick="openInventory()" style="padding:14px 10px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:5px;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-dim)'">
+              <span style="font-size:20px;">🎒</span>Inventory
+            </button>
+            <button onclick="showToast('Achievements coming soon!')" style="padding:14px 10px;text-align:center;font-family:var(--font-ui);font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);cursor:pointer;border-radius:var(--r);transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:5px;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-dim)'">
+              <span style="font-size:20px;">🏆</span>Achievements
+            </button>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
@@ -954,10 +1027,12 @@ function deleteRun(id) { return new Promise((res,rej) => { const req=db.transact
 // TABS
 // ══════════════════════════════════════════════
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['record','history'][i]===tab));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['record','history','profile'][i]===tab));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
   if (tab==='history') loadHistory();
+  if (tab==='profile') refreshProfileTab();
+}
 }
 
 // ══════════════════════════════════════════════
@@ -987,7 +1062,21 @@ function onPosition(pos) {
   if(!state.running||state.paused) return;
   const {latitude:lat,longitude:lng,accuracy}=pos.coords;
   if(accuracy>50) return;
-  if(state.coords.length>0){const last=state.coords[state.coords.length-1];const d=haversine(last[0],last[1],lat,lng);if(d>0.003&&d<0.3)state.distance+=d;}
+  let moved = false;
+  if(state.coords.length>0){
+    const last=state.coords[state.coords.length-1];
+    const d=haversine(last[0],last[1],lat,lng);
+    if(d>0.003&&d<0.3){ state.distance+=d; moved=true; }
+  } else {
+    moved = true; // first point always counts
+  }
+  // Only add point and update trail if user actually moved
+  if(!moved) {
+    // Still update marker position for accuracy
+    if(posMarker){posMarker.setLatLng([lat,lng]);accuracyCircle.setLatLng([lat,lng]);accuracyCircle.setRadius(accuracy);}
+    map.panTo([lat,lng],{animate:true,duration:0.5});
+    return;
+  }
   state.coords.push([lat,lng]);
   routeLine.setLatLngs(state.coords);
   if(!posMarker){posMarker=L.circleMarker([lat,lng],{radius:9,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:1,weight:3}).addTo(map);accuracyCircle=L.circle([lat,lng],{radius:accuracy,color:'#a8ff3e',fillColor:'#a8ff3e',fillOpacity:0.07,weight:1}).addTo(map);}
@@ -1147,29 +1236,39 @@ function dismissPostRun() {
 // ══════════════════════════════════════════════
 // PROFILE SCREEN
 // ══════════════════════════════════════════════
-function openProfile() {
-  const needed=xpForLevel(player.level);
-  const pct=Math.min(100,(player.xp/needed)*100);
-  document.getElementById('profile-lv-badge').textContent=`LV. ${player.level}`;
-  document.getElementById('profile-xp-fill').style.width=pct+'%';
-  document.getElementById('profile-xp-text').textContent=`${player.xp} / ${needed} XP to next level`;
-  document.getElementById('player-name-input').value=player.name||'Runner';
-  document.getElementById('profile-bar-stamina').style.width=Math.min(100,player.stamina/2)+'%';
-  document.getElementById('profile-bar-speed').style.width=Math.min(100,player.speed/2)+'%';
-  document.getElementById('profile-bar-endurance').style.width=Math.min(100,player.endurance/2)+'%';
-  document.getElementById('profile-val-stamina').textContent=player.stamina;
-  document.getElementById('profile-val-speed').textContent=player.speed;
-  document.getElementById('profile-val-endurance').textContent=player.endurance;
-  updateAvatar();
-  getAllRuns().then(runs=>{
-    document.getElementById('pt-runs').textContent=runs.length;
-    document.getElementById('pt-km').textContent=runs.reduce((s,r)=>s+r.distance,0).toFixed(1);
-    document.getElementById('pt-xp').textContent=player.totalXp;
+function refreshProfileTab() {
+  const needed = xpForLevel(player.level);
+  const pct = Math.min(100, (player.xp / needed) * 100);
+  document.getElementById('p-lv-badge').textContent = `LV. ${player.level}`;
+  document.getElementById('p-xp-fill').style.width = pct + '%';
+  document.getElementById('p-xp-text').textContent = `${player.xp} / ${needed} XP`;
+  document.getElementById('player-name-input').value = player.name || 'Runner';
+  document.getElementById('p-bar-stamina').style.width = Math.min(100, player.stamina / 2) + '%';
+  document.getElementById('p-bar-speed').style.width = Math.min(100, player.speed / 2) + '%';
+  document.getElementById('p-bar-endurance').style.width = Math.min(100, player.endurance / 2) + '%';
+  document.getElementById('p-val-stamina').textContent = player.stamina;
+  document.getElementById('p-val-speed').textContent = player.speed;
+  document.getElementById('p-val-endurance').textContent = player.endurance;
+  // Avatar
+  const outfit = player.equipped.outfit;
+  const head = player.equipped.head;
+  const acc = player.equipped.accessory;
+  document.getElementById('p-avatar-outfit').textContent = outfit ? outfit.icon : '🧍';
+  const badges = document.getElementById('p-avatar-badges');
+  badges.innerHTML = '';
+  if(head){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=head.icon; badges.appendChild(b); }
+  if(acc){ const b=document.createElement('div'); b.className='equip-badge'; b.textContent=acc.icon; badges.appendChild(b); }
+  // Totals
+  getAllRuns().then(runs => {
+    document.getElementById('p-total-runs').textContent = runs.length;
+    document.getElementById('p-total-km').textContent = runs.reduce((s,r)=>s+r.distance,0).toFixed(1);
+    document.getElementById('p-total-xp').textContent = player.totalXp;
   });
-  document.getElementById('profile-screen').classList.add('show');
 }
 
-function closeProfile() { document.getElementById('profile-screen').classList.remove('show'); }
+function openProfile() { switchTab('profile'); }
+
+function closeProfile() { switchTab('record'); }
 
 function saveName() {
   player.name=document.getElementById('player-name-input').value||'Runner';
@@ -1202,7 +1301,7 @@ function openInventory() {
 
 function closeInventory() {
   document.getElementById('inventory-screen').classList.remove('show');
-  updateAvatar(); // refresh avatar after potential equip changes
+  refreshProfileTab();
 }
 
 function refreshEquipSlots() {
