@@ -1,264 +1,1062 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System: Grand Line Log Pose</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        :root { --neon-blue: #00E5FF; --neon-purple: #9D50BB; --gold: #FFD700; --bg-black: #050505; --panel-bg: rgba(20, 20, 25, 0.98); }
-        body { margin: 0; padding: 0; background-color: var(--bg-black); color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>STRIDE — Personal Run Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Unbounded:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --accent: #c8f135;
+    --accent-dim: rgba(200, 241, 53, 0.12);
+    --text: #f0f0f0;
+    --text-muted: #555;
+    --text-dim: #888;
+    --red: #ff4444;
+    --font-display: 'Unbounded', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 4px;
+  }
 
-        /* --- OVERLAYS --- */
-        #identity-overlay, #customizer-overlay, #tab-shop {
-            position: fixed; inset: 0; background: black; z-index: 2000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; text-align: center;
-        }
-        #customizer-overlay { display: none; z-index: 2100; }
-        #tab-shop { display: none; z-index: 1500; padding-top: 80px; overflow-y: auto; justify-content: flex-start; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* --- UI COMPONENTS --- */
-        #xp-container { position: fixed; top: 0; width: 100%; height: 65px; background: rgba(0,0,0,0.95); z-index: 1100; border-bottom: 1px solid var(--neon-blue); display: flex; flex-direction: column; justify-content: center; padding: 0 15px; box-sizing: border-box; }
-        .xp-text { font-size: 0.65rem; color: var(--neon-blue); font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; text-transform: uppercase; }
-        .xp-bar-bg { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
-        #xp-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); transition: width 0.5s; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
 
-        #sidebar { position: fixed; left: -250px; top: 0; width: 250px; height: 100%; background: var(--panel-bg); border-right: 1px solid var(--neon-purple); z-index: 1200; transition: 0.3s; padding-top: 80px; }
-        #sidebar.open { left: 0; }
-        .side-item { padding: 18px; border-bottom: 1px solid #222; cursor: pointer; color: #888; font-size: 0.85rem; }
-        .side-item.active { color: var(--neon-blue); background: rgba(0, 229, 255, 0.05); }
+  /* ── LAYOUT ── */
+  #app {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    grid-template-rows: 100vh;
+    height: 100vh;
+  }
 
-        .menu-btn { position: fixed; top: 80px; left: 15px; z-index: 1001; background: rgba(0,0,0,0.6); border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 8px 12px; border-radius: 5px; cursor: pointer; }
+  /* ── LEFT PANEL ── */
+  #panel {
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10;
+  }
 
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        .tab-content { display: none; position: fixed; inset: 0; background: var(--bg-black); z-index: 500; padding-top: 100px; overflow-y: auto; }
-        .tab-content.active { display: block; }
+  #header {
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
 
-        .btn-action { width: 100%; max-width: 250px; padding: 12px; border: 1px solid var(--neon-blue); background: rgba(0,0,0,0.5); color: var(--neon-blue); margin: 8px 0; font-weight: bold; cursor: pointer; border-radius: 4px; text-transform: uppercase; }
-        #voyage-btn { position: fixed; bottom: 30px; left: 10%; width: 80%; padding: 15px; z-index: 600; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); color: black; border: none; font-weight: bold; border-radius: 5px; }
-        
-        /* --- SPRITE BOX --- */
-        .sprite-box { width: 120px; height: 120px; background: #111; border: 1px solid #333; position: relative; display: flex; align-items: center; justify-content: center; margin: 10px auto; }
-        .layer-base { font-size: 4rem; z-index: 2; }
-        .layer-hat { position: absolute; top: 5px; font-size: 2.5rem; z-index: 5; }
-        .layer-back { position: absolute; font-size: 3.5rem; z-index: 1; opacity: 0.6; }
-    </style>
+  .logo {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-top: 3px;
+  }
+
+  /* ── TABS ── */
+  #tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+  }
+
+  .tab.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .tab:hover:not(.active) { color: var(--text-dim); }
+
+  .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .tab-content.active { display: flex; }
+
+  /* ── RECORD TAB ── */
+  #stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .stat-box {
+    background: var(--bg);
+    padding: 20px 18px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .stat-value.big {
+    font-size: 38px;
+  }
+
+  .stat-unit {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  #stat-time { grid-column: 1 / -1; background: var(--surface); }
+  #stat-time .stat-value { font-size: 52px; letter-spacing: -0.04em; }
+
+  /* Status dot */
+  .status-row {
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+
+  .dot.ready { background: var(--text-dim); }
+  .dot.recording { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  .dot.paused { background: #f5a623; animation: none; }
+  .dot.no-gps { background: var(--red); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  .status-text {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* Controls */
+  #controls {
+    padding: 16px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .btn {
+    flex: 1;
+    padding: 14px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.15s;
+  }
+
+  .btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .btn.primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .btn.primary:hover { background: #d4f545; }
+
+  .btn.danger {
+    border-color: #333;
+    color: var(--text-muted);
+  }
+
+  .btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+  /* Route preview line */
+  #route-info {
+    padding: 12px 18px;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ── HISTORY TAB ── */
+  #history-list {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .history-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    line-height: 1.8;
+  }
+
+  .history-empty .big-icon {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  .run-card {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .run-card:hover { background: var(--surface); }
+  .run-card.selected { background: var(--accent-dim); border-left: 2px solid var(--accent); }
+
+  .run-card-date {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .run-card-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .run-metric-label {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .run-metric-val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .run-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .mini-btn {
+    padding: 5px 10px;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.15s;
+  }
+
+  .mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mini-btn.del:hover { border-color: var(--red); color: var(--red); }
+
+  /* Export bar */
+  #export-bar {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* ── MAP ── */
+  #map-container {
+    position: relative;
+    background: #0d0d0d;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Leaflet dark filter — no hue-rotate so map stays readable */
+  .leaflet-tile { filter: brightness(0.55) saturate(0.5) contrast(1.1); }
+  .leaflet-container { background: #090909; }
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text-dim) !important;
+    border-color: var(--border) !important;
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Map overlay info */
+  #map-overlay {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .map-badge {
+    background: rgba(10,10,10,0.92);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius);
+  }
+
+  .map-badge span { color: var(--accent); font-family: var(--font-display); font-size: 14px; display: block; margin-top: 2px; }
+
+  /* No GPS modal */
+  #gps-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #gps-modal.show { display: flex; }
+
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 32px;
+    max-width: 320px;
+    text-align: center;
+  }
+
+  .modal-box h3 {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .modal-box p {
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    #panel {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      max-height: 55vh;
+    }
+
+    #map-container {
+      height: 45vh;
+    }
+
+    #stat-time .stat-value { font-size: 36px; }
+    .stat-value { font-size: 20px; }
+  }
+</style>
 </head>
 <body>
-
-    <div id="identity-overlay">
-        <h2 style="color:var(--gold); letter-spacing:3px;">IDENTITY SCAN</h2>
-        <button class="btn-action" onclick="choosePath('Pirate')">PIRATE</button>
-        <button class="btn-action" onclick="choosePath('Marine')">MARINE</button>
-        <button class="btn-action" onclick="choosePath('Hunter')">HUNTER</button>
-        <button class="btn-action" onclick="choosePath('Villain')">VILLAIN</button>
+<div id="app">
+  <!-- LEFT PANEL -->
+  <div id="panel">
+    <div id="header">
+      <div class="logo">Stride</div>
+      <div class="logo-sub">personal run tracker</div>
     </div>
 
-    <div id="customizer-overlay">
-        <h2 style="color:var(--gold);">CREATE CHARACTER</h2>
-        <div class="sprite-box">
-            <div id="preview-base" class="layer-base">👤</div>
+    <div id="tabs">
+      <button class="tab active" onclick="switchTab('record')">Record</button>
+      <button class="tab" onclick="switchTab('history')">History</button>
+    </div>
+
+    <!-- RECORD TAB -->
+    <div id="tab-record" class="tab-content active">
+      <div id="stats-grid">
+        <div class="stat-box" id="stat-time">
+          <div class="stat-label">Duration</div>
+          <div class="stat-value" id="display-time">00:00:00</div>
         </div>
-        <div style="display:flex; gap:10px; margin: 20px 0;">
-            <button class="btn-action" style="width:60px" onclick="cycleChar(-1)">◀</button>
-            <button class="btn-action" style="width:60px" onclick="cycleChar(1)">▶</button>
+        <div class="stat-box">
+          <div class="stat-label">Distance</div>
+          <div class="stat-value" id="display-dist">0.00</div>
+          <div class="stat-unit">km</div>
         </div>
-        <button class="btn-action" onclick="finalizeChar()">INITIALIZE SYSTEM</button>
-    </div>
-
-    <div id="xp-container">
-        <div class="xp-text">
-            <span><span id="rank-label">RANK: E</span> <span id="multiplier-badge" style="background:var(--gold); color:black; font-size:0.6rem; padding:2px 5px; border-radius:3px; display:none;">1.5X BUFF</span></span>
-            <span id="xp-stats">0 / 1,000</span>
+        <div class="stat-box">
+          <div class="stat-label">Pace</div>
+          <div class="stat-value" id="display-pace">--:--</div>
+          <div class="stat-unit">min/km</div>
         </div>
-        <div class="xp-bar-bg"><div id="xp-bar-fill"></div></div>
-    </div>
-
-    <button class="menu-btn" onclick="toggleSidebar()">☰ MENU</button>
-
-    <div id="sidebar">
-        <div class="side-item active" onclick="switchTab('quest', this)">🗺️ VOYAGE</div>
-        <div class="side-item" onclick="switchTab('records', this)">📜 LOGS</div>
-        <div class="side-item" onclick="switchTab('status', this)">👤 PROFILE</div>
-    </div>
-
-    <div id="tab-quest"><div id="map"></div><button id="voyage-btn" onclick="toggleVoyage()">SET SAIL</button></div>
-    <div id="tab-records" class="tab-content"><div id="logs-container" style="padding:15px;"></div></div>
-
-    <div id="tab-status" class="tab-content" style="text-align:center;">
-        <div style="border: 2px solid var(--gold); display: inline-block; padding: 25px; background: #0a0a0a; min-width: 220px;">
-            <p id="label-type" style="color:var(--gold); margin:0; font-weight:bold; letter-spacing:2px;">WANTED</p>
-            <div class="sprite-box">
-                <div id="char-base" class="layer-base">👤</div>
-                <div id="equipped-hat" class="layer-hat"></div>
-                <div id="equipped-back" class="layer-back"></div>
-            </div>
-            <h2 id="status-beli" style="font-size:2rem; margin:10px 0;">0</h2>
-            <h3 id="status-rank-name" style="color:var(--neon-blue); font-size:0.9rem; border-top:1px solid #222; padding-top:10px;">CABIN BOY</h3>
+        <div class="stat-box">
+          <div class="stat-label">Speed</div>
+          <div class="stat-value" id="display-speed">0.0</div>
+          <div class="stat-unit">km/h</div>
         </div>
-        <div style="margin-top: 20px; display:flex; flex-direction:column; align-items:center; gap:10px;">
-            <button class="btn-action" style="max-width:180px" onclick="openShop()">🛒 SYSTEM SHOP</button>
-            <button class="btn-action" style="max-width:180px; border-color:#555; color:#888;" onclick="changePath()">🔄 CHANGE PATH</button>
-            <button onclick="fullReset()" style="color:#ff4b2b; font-size:0.7rem; background:none; border:none; text-decoration:underline;">WIPE DATA</button>
+        <div class="stat-box">
+          <div class="stat-label">Points</div>
+          <div class="stat-value" id="display-pts">0</div>
+          <div class="stat-unit">gps pts</div>
         </div>
+      </div>
+
+      <div class="status-row">
+        <div class="dot ready" id="status-dot"></div>
+        <span class="status-text" id="status-text">Ready — awaiting GPS</span>
+      </div>
+
+      <div id="controls">
+        <button class="btn primary" id="btn-start" onclick="startRun()">Start Run</button>
+        <button class="btn" id="btn-pause" onclick="pauseRun()" disabled>Pause</button>
+        <button class="btn danger" id="btn-stop" onclick="stopRun()" disabled>Stop</button>
+      </div>
+
+      <div id="route-info" id="route-info-text">No active route</div>
     </div>
 
-    <div id="tab-shop">
-        <h2 style="color:var(--gold);">[ SYSTEM SHOP ]</h2>
-        <div id="shop-items" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:15px; width:100%; box-sizing:border-box;"></div>
-        <button class="btn-action" onclick="closeShop()">EXIT</button>
+    <!-- HISTORY TAB -->
+    <div id="tab-history" class="tab-content">
+      <div id="history-list">
+        <div class="history-empty" id="history-empty">
+          <span class="big-icon">◎</span>
+          No runs yet.<br>Start your first run<br>to see history here.
+        </div>
+      </div>
+      <div id="export-bar">
+        <button class="btn" onclick="exportAllCSV()" style="font-size:9px">Export All CSV</button>
+        <button class="btn" onclick="exportAllGPX()" style="font-size:9px">Export All GPX</button>
+      </div>
     </div>
+  </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        let map, userMarker, pathLine, watchId, isTracking = false, huntDist = 0;
-        const AVATARS = ["👤", "🥷", "🧙", "🤖", "🦊", "🦁", "💀", "👽"];
-        let currentAvatarIdx = 0;
+  <!-- MAP -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-overlay">
+      <div class="map-badge" id="map-badge-dist" style="display:none">
+        Distance<span id="mb-dist">0.00 km</span>
+      </div>
+      <div class="map-badge" id="map-badge-pace" style="display:none">
+        Pace<span id="mb-pace">--:--</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-        const PATH_DATA = {
-            Pirate: { currency: "Bounty", unit: "₱", label: "WANTED", color: "#00E5FF", ranks: [{name:"Cabin Boy",min:0},{name:"Crew",min:50000},{name:"Mate",min:200000},{name:"Captain",min:500000},{name:"Warlord",min:1000000},{name:"Yonko",min:2500000},{name:"King",min:5000000}] },
-            Marine: { currency: "Justice", unit: "JP", label: "ADJUDICATOR", color: "#007BFF", ranks: [{name:"Recruit",min:0},{name:"Seaman",min:51},{name:"Lieutenant",min:201},{name:"Commodore",min:501},{name:"Vice Admiral",min:1001},{name:"Admiral",min:2501},{name:"Fleet Admiral",min:5001}] },
-            Hunter: { currency: "Hunter XP", unit: "XP", label: "LICENSE", color: "#00FF41", ranks: [{name:"E-Rank",min:0},{name:"D-Rank",min:51},{name:"C-Rank",min:201},{name:"B-Rank",min:501},{name:"A-Rank",min:1001},{name:"S-Rank",min:2501},{name:"National",min:5001}] },
-            Villain: { currency: "Infamy", unit: "INF", label: "THREAT", color: "#FF0055", ranks: [{name:"Rogue",min:0},{name:"Outlaw",min:51},{name:"Mastermind",min:201},{name:"Overlord",min:501},{name:"Tyrant",min:1001},{name:"Dark Emperor",min:2501},{name:"World-Ender",min:5001}] }
-        };
+<!-- GPS Modal -->
+<div id="gps-modal">
+  <div class="modal-box">
+    <h3>GPS Required</h3>
+    <p>Stride needs location access to track your run. Please allow location permissions in your browser and try again.</p>
+    <button class="btn primary" onclick="document.getElementById('gps-modal').classList.remove('show')">Got it</button>
+  </div>
+</div>
 
-        const SHOP_ITEMS = [
-            { id:'cape', name:"Shadow Cape", cost:500, icon:"🧣", type:"back" },
-            { id:'straw', name:"Straw Hat", cost:1500, icon:"👒", type:"hat" },
-            { id:'aura', name:"God Aura", cost:5000, icon:"🔥", type:"back" },
-            { id:'crown', name:"King Crown", cost:10000, icon:"👑", type:"hat" }
-        ];
+<!-- Toast -->
+<div id="toast"></div>
 
-        // --- CUSTOMIZER LOGIC ---
-        function cycleChar(dir) {
-            currentAvatarIdx = (currentAvatarIdx + dir + AVATARS.length) % AVATARS.length;
-            document.getElementById('preview-base').innerText = AVATARS[currentAvatarIdx];
-        }
+<script>
+// ── STATE ──
+const state = {
+  running: false,
+  paused: false,
+  startTime: null,
+  pausedAt: null,
+  totalPausedMs: 0,
+  elapsed: 0,
+  coords: [],
+  distance: 0,
+  watchId: null,
+  timerInterval: null,
+  currentPos: null,
+  selectedRunId: null,
+};
 
-        function finalizeChar() {
-            localStorage.setItem('user_avatar', AVATARS[currentAvatarIdx]);
-            document.getElementById('customizer-overlay').style.display = 'none';
-            applyTheme(localStorage.getItem('user_path'));
-            initMap();
-        }
+// ── MAP SETUP ──
+const map = L.map('map', { zoomControl: true, attributionControl: false }).setView([0, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-        function choosePath(p) {
-            localStorage.setItem('user_path', p);
-            document.getElementById('identity-overlay').style.display = 'none';
-            document.getElementById('customizer-overlay').style.display = 'flex';
-        }
+let routeLine = L.polyline([], { color: '#c8f135', weight: 4, opacity: 0.9 }).addTo(map);
+let posMarker = null;
+let accuracyCircle = null;
+let historyLine = null;
+let startMarker = null, endMarker = null;
 
-        // --- CORE SYSTEM ---
-        function applyTheme(p) {
-            document.documentElement.style.setProperty('--neon-blue', PATH_DATA[p].color);
-            updateGlobalUI();
-            updateSprite();
-        }
+// Fly to user's real location immediately on load
+navigator.geolocation?.getCurrentPosition(pos => {
+  map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+  // Show a one-time "you are here" dot while idle
+  updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+}, null, { enableHighAccuracy: true, timeout: 8000 });
 
-        function updateSprite() {
-            const avatar = localStorage.getItem('user_avatar') || "👤";
-            const eq = JSON.parse(localStorage.getItem('sys_equipped') || "{}");
-            document.getElementById('char-base').innerText = avatar;
-            document.getElementById('equipped-hat').innerText = eq.hat || "";
-            document.getElementById('equipped-back').innerText = eq.back || "";
-        }
+let idleMarker = null, idleCircle = null;
+function updateIdleMarker(lat, lng, accuracy) {
+  if (state.running) return; // don't show idle marker while recording
+  if (!idleMarker) {
+    idleMarker = L.circleMarker([lat, lng], {
+      radius: 7, color: '#4a9eff', fillColor: '#4a9eff',
+      fillOpacity: 0.9, weight: 2
+    }).addTo(map).bindTooltip('You are here');
+    idleCircle = L.circle([lat, lng], {
+      radius: accuracy, color: '#4a9eff', fillColor: '#4a9eff',
+      fillOpacity: 0.08, weight: 1
+    }).addTo(map);
+  } else {
+    idleMarker.setLatLng([lat, lng]);
+    idleCircle.setLatLng([lat, lng]);
+    idleCircle.setRadius(accuracy);
+  }
+}
 
-        function initMap() {
-            if(map) return;
-            map = L.map('map', { zoomControl:false }).setView([14.5486, 121.0478], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            userMarker = L.circleMarker([14.5486, 121.0478], { color:'var(--neon-blue)', radius:6, fillOpacity:1 }).addTo(map);
-            pathLine = L.polyline([], { color:'var(--neon-purple)', weight:3 }).addTo(map);
-        }
+// Keep idle marker updated even before a run starts
+let idleWatchId = navigator.geolocation?.watchPosition(pos => {
+  if (!state.running) updateIdleMarker(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+}, null, { enableHighAccuracy: true, maximumAge: 5000 });
 
-        function updateGlobalUI(session = 0) {
-            const pk = localStorage.getItem('user_path') || 'Pirate';
-            const d = PATH_DATA[pk];
-            const logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
-            const total = logs.reduce((s,l)=>s+l.dist,0) + session;
-            const rank = [...d.ranks].reverse().find(r => total >= r.min) || d.ranks[0];
-            const nxt = d.ranks[d.ranks.indexOf(rank)+1] || {min: total*2};
+// ── INDEXEDDB ──
+let db;
+const DB_NAME = 'stride_db', DB_VERSION = 1, STORE = 'runs';
 
-            document.getElementById('rank-label').innerText = `${pk}: ${rank.name}`;
-            document.getElementById('xp-stats').innerText = `${Math.floor(total).toLocaleString()} / ${nxt.min.toLocaleString()}`;
-            document.getElementById('xp-bar-fill').style.width = `${((total - rank.min) / (nxt.min - rank.min)) * 100}%`;
-            document.getElementById('status-beli').innerText = (d.unit==='₱'?'₱':'') + Math.floor(total).toLocaleString() + (d.unit!=='₱'?' '+d.unit:'');
-            document.getElementById('status-rank-name').innerText = rank.name;
-            document.getElementById('label-type').innerText = d.label;
-        }
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
 
-        function openShop() {
-            const purchased = JSON.parse(localStorage.getItem('sys_purchased') || "[]");
-            document.getElementById('tab-shop').style.display = 'block';
-            document.getElementById('shop-items').innerHTML = SHOP_ITEMS.map(i => {
-                const owned = purchased.includes(i.id);
-                return `<div style="background:#111; border:1px solid #222; padding:15px; border-radius:8px; text-align:center;">
-                    <div style="font-size:2rem">${i.icon}</div>
-                    <button onclick="${owned?`equipItem('${i.id}')`:`buyItem('${i.id}',${i.cost})`}" style="width:100%; margin-top:10px; font-size:0.6rem; border:1px solid var(--neon-blue); background:none; color:var(--neon-blue); padding:5px;">
-                        ${owned?'EQUIP':'BUY ฿'+i.cost}
-                    </button>
-                </div>`;
-            }).join('');
-        }
+function saveRun(run) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).add(run);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
 
-        function buyItem(id, cost) {
-            const total = JSON.parse(localStorage.getItem('system_logs_v4') || "[]").reduce((s,l)=>s+l.dist,0);
-            if(total < cost) return alert("NOT ENOUGH FUNDS");
-            let p = JSON.parse(localStorage.getItem('sys_purchased') || "[]");
-            p.push(id); localStorage.setItem('sys_purchased', JSON.stringify(p));
-            let logs = JSON.parse(localStorage.getItem('system_logs_v4') || "[]");
-            logs.unshift({id: Date.now(), date: "Shop", dist: -cost});
-            localStorage.setItem('system_logs_v4', JSON.stringify(logs));
-            openShop();
-        }
+function getAllRuns() {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => res(req.result.reverse());
+    req.onerror = () => rej(req.error);
+  });
+}
 
-        function equipItem(id) {
-            let eq = JSON.parse(localStorage.getItem('sys_equipped') || "{}");
-            const itm = SHOP_ITEMS.find(i => i.id === id);
-            eq[itm.type] = itm.icon;
-            localStorage.setItem('sys_equipped', JSON.stringify(eq));
-            alert("EQUIPPED!");
-        }
+function deleteRun(id) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).delete(id);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
 
-        function toggleVoyage() {
-            const btn = document.getElementById('voyage-btn');
-            if(!isTracking) {
-                isTracking = true; btn.innerText = "END QUEST";
-                watchId = navigator.geolocation.watchPosition(p => {
-                    const pos = [p.coords.latitude, p.coords.longitude];
-                    huntDist += 10; // Simulated for testing, use real distance logic for production
-                    userMarker.setLatLng(pos);
-                    updateGlobalUI(huntDist);
-                }, null, {enableHighAccuracy:true});
-            } else {
-                isTracking = false; navigator.geolocation.clearWatch(watchId);
-                btn.innerText = "SET SAIL";
-                updateGlobalUI();
-            }
-        }
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['record','history'][i] === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'history') loadHistory();
+}
 
-        function closeShop() { document.getElementById('tab-shop').style.display = 'none'; updateSprite(); }
-        function switchTab(tId, el) { 
-            document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-            if(tId!=='quest') document.getElementById('tab-'+tId).classList.add('active');
-            toggleSidebar(); updateGlobalUI(); 
-        }
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
-        function changePath() { localStorage.removeItem('user_path'); location.reload(); }
-        function fullReset() { localStorage.clear(); location.reload(); }
+// ── GPS TRACKING ──
+function startRun() {
+  if (!navigator.geolocation) { showToast('GPS not supported'); return; }
 
-        window.onload = function() {
-            const path = localStorage.getItem('user_path');
-            const avatar = localStorage.getItem('user_avatar');
-            if(path && avatar) { 
-                document.getElementById('identity-overlay').style.display='none'; 
-                applyTheme(path); initMap(); 
-            } else if (path && !avatar) {
-                document.getElementById('identity-overlay').style.display='none';
-                document.getElementById('customizer-overlay').style.display='flex';
-            }
-        };
-    </script>
+  state.running = true;
+  state.paused = false;
+  state.startTime = Date.now();
+  state.totalPausedMs = 0;
+  state.coords = [];
+  state.distance = 0;
+  state.elapsed = 0;
+
+  // Hide idle marker when recording starts
+  if (idleMarker) { map.removeLayer(idleMarker); map.removeLayer(idleCircle); idleMarker = null; idleCircle = null; }
+
+  routeLine.setLatLngs([]);
+  if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
+  if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+  if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = false;
+  document.getElementById('btn-stop').disabled = false;
+  setStatus('recording', 'Recording…');
+
+  state.timerInterval = setInterval(updateTimer, 1000);
+
+  state.watchId = navigator.geolocation.watchPosition(
+    onPosition,
+    onGPSError,
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+  );
+
+  showBadges(true);
+}
+
+function onPosition(pos) {
+  if (!state.running || state.paused) return;
+  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+  state.currentPos = [lat, lng];
+
+  if (accuracy > 50) return; // ignore very inaccurate readings
+
+  if (state.coords.length > 0) {
+    const last = state.coords[state.coords.length - 1];
+    const d = haversine(last[0], last[1], lat, lng);
+    if (d > 0.003 && d < 0.3) { // min 3m, max 300m jump
+      state.distance += d;
+    }
+  }
+
+  state.coords.push([lat, lng]);
+  routeLine.setLatLngs(state.coords);
+
+  // Position marker + accuracy circle
+  if (!posMarker) {
+    posMarker = L.circleMarker([lat, lng], {
+      radius: 9, color: '#c8f135', fillColor: '#c8f135',
+      fillOpacity: 1, weight: 3
+    }).addTo(map);
+    accuracyCircle = L.circle([lat, lng], {
+      radius: accuracy, color: '#c8f135', fillColor: '#c8f135',
+      fillOpacity: 0.07, weight: 1
+    }).addTo(map);
+  } else {
+    posMarker.setLatLng([lat, lng]);
+    accuracyCircle.setLatLng([lat, lng]);
+    accuracyCircle.setRadius(accuracy);
+  }
+
+  map.panTo([lat, lng], { animate: true, duration: 0.5 });
+
+  updateStats();
+  document.getElementById('display-pts').textContent = state.coords.length;
+  document.getElementById('route-info').textContent =
+    `${state.coords.length} GPS points · accuracy ±${Math.round(accuracy)}m`;
+}
+
+function onGPSError(err) {
+  if (err.code === 1) {
+    document.getElementById('gps-modal').classList.add('show');
+    stopRun(true);
+  } else {
+    setStatus('paused', 'GPS signal lost…');
+  }
+}
+
+function pauseRun() {
+  if (state.paused) {
+    // Resume
+    state.paused = false;
+    state.totalPausedMs += Date.now() - state.pausedAt;
+    document.getElementById('btn-pause').textContent = 'Pause';
+    setStatus('recording', 'Recording…');
+  } else {
+    // Pause
+    state.paused = true;
+    state.pausedAt = Date.now();
+    document.getElementById('btn-pause').textContent = 'Resume';
+    setStatus('paused', 'Paused');
+  }
+}
+
+function stopRun(silent = false) {
+  if (!state.running && !silent) return;
+
+  clearInterval(state.timerInterval);
+  if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId);
+
+  const run = {
+    date: new Date().toISOString(),
+    duration: state.elapsed,
+    distance: state.distance,
+    coords: state.coords,
+  };
+
+  state.running = false;
+  state.paused = false;
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-stop').disabled = true;
+  document.getElementById('btn-pause').textContent = 'Pause';
+  setStatus('ready', 'Ready — awaiting GPS');
+  showBadges(false);
+
+  if (state.coords.length > 2 && !silent) {
+    saveRun(run).then(() => {
+      showToast('Run saved!');
+      renderEndMarkers();
+    });
+  } else if (!silent) {
+    showToast('Run too short to save');
+    routeLine.setLatLngs([]);
+  }
+
+  if (posMarker) { map.removeLayer(posMarker); posMarker = null; }
+  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+}
+
+function renderEndMarkers() {
+  if (state.coords.length < 2) return;
+  startMarker = L.circleMarker(state.coords[0], {
+    radius: 7, color: '#fff', fillColor: '#fff', fillOpacity: 0.9, weight: 2
+  }).addTo(map).bindTooltip('Start');
+  endMarker = L.circleMarker(state.coords[state.coords.length - 1], {
+    radius: 7, color: '#c8f135', fillColor: '#c8f135', fillOpacity: 1, weight: 2
+  }).addTo(map).bindTooltip('Finish');
+}
+
+// ── TIMER ──
+function updateTimer() {
+  if (state.paused) return;
+  state.elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedMs) / 1000);
+  document.getElementById('display-time').textContent = formatDuration(state.elapsed);
+  updateStats();
+}
+
+function updateStats() {
+  const km = state.distance;
+  document.getElementById('display-dist').textContent = km.toFixed(2);
+
+  if (km > 0.05 && state.elapsed > 0) {
+    const paceSec = state.elapsed / km;
+    document.getElementById('display-pace').textContent = formatPace(paceSec);
+    document.getElementById('display-speed').textContent = (km / (state.elapsed / 3600)).toFixed(1);
+    document.getElementById('mb-dist').textContent = km.toFixed(2) + ' km';
+    document.getElementById('mb-pace').textContent = formatPace(paceSec) + ' /km';
+  }
+}
+
+// ── HISTORY ──
+async function loadHistory() {
+  const runs = await getAllRuns();
+  const el = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+
+  if (runs.length === 0) {
+    empty.style.display = 'block';
+    el.innerHTML = '';
+    el.appendChild(empty);
+    return;
+  }
+
+  el.innerHTML = '';
+  runs.forEach(run => {
+    const card = document.createElement('div');
+    card.className = 'run-card' + (run.id === state.selectedRunId ? ' selected' : '');
+    card.dataset.id = run.id;
+
+    const pace = run.duration > 0 && run.distance > 0.05
+      ? formatPace(run.duration / run.distance) : '--:--';
+
+    card.innerHTML = `
+      <div class="run-card-date">${formatDate(run.date)}</div>
+      <div class="run-card-metrics">
+        <div>
+          <div class="run-metric-label">Distance</div>
+          <div class="run-metric-val">${run.distance.toFixed(2)}</div>
+          <div style="font-size:8px;color:var(--text-muted);letter-spacing:0.08em">km</div>
+        </div>
+        <div>
+          <div class="run-metric-label">Time</div>
+          <div class="run-metric-val">${formatDuration(run.duration)}</div>
+        </div>
+        <div>
+          <div class="run-metric-label">Pace</div>
+          <div class="run-metric-val">${pace}</div>
+          <div style="font-size:8px;color:var(--text-muted);letter-spacing:0.08em">min/km</div>
+        </div>
+      </div>
+      <div class="run-card-actions">
+        <button class="mini-btn" onclick="viewRun(${run.id})">View</button>
+        <button class="mini-btn" onclick="exportRunCSV(${run.id})">CSV</button>
+        <button class="mini-btn" onclick="exportRunGPX(${run.id})">GPX</button>
+        <button class="mini-btn del" onclick="confirmDelete(${run.id})">Delete</button>
+      </div>
+    `;
+    el.appendChild(card);
+  });
+}
+
+async function viewRun(id) {
+  const runs = await getAllRuns();
+  const run = runs.find(r => r.id === id);
+  if (!run || !run.coords.length) return;
+
+  state.selectedRunId = id;
+  switchTab('record');
+
+  if (historyLine) map.removeLayer(historyLine);
+  if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+  if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+
+  historyLine = L.polyline(run.coords, { color: '#c8f135', weight: 4, opacity: 0.85 }).addTo(map);
+  map.fitBounds(historyLine.getBounds(), { padding: [40, 40] });
+
+  startMarker = L.circleMarker(run.coords[0], {
+    radius: 7, color: '#fff', fillColor: '#fff', fillOpacity: 0.9, weight: 2
+  }).addTo(map).bindTooltip('Start');
+  endMarker = L.circleMarker(run.coords[run.coords.length - 1], {
+    radius: 7, color: '#c8f135', fillColor: '#c8f135', fillOpacity: 1, weight: 2
+  }).addTo(map).bindTooltip('Finish');
+
+  // Update display
+  document.getElementById('display-time').textContent = formatDuration(run.duration);
+  document.getElementById('display-dist').textContent = run.distance.toFixed(2);
+  if (run.distance > 0.05 && run.duration > 0) {
+    document.getElementById('display-pace').textContent = formatPace(run.duration / run.distance);
+    document.getElementById('display-speed').textContent = (run.distance / (run.duration / 3600)).toFixed(1);
+  }
+  document.getElementById('display-pts').textContent = run.coords.length;
+  document.getElementById('route-info').textContent = `Viewing saved run · ${formatDate(run.date)}`;
+}
+
+async function confirmDelete(id) {
+  if (!confirm('Delete this run?')) return;
+  await deleteRun(id);
+  showToast('Run deleted');
+  loadHistory();
+  if (state.selectedRunId === id) {
+    if (historyLine) { map.removeLayer(historyLine); historyLine = null; }
+    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
+    if (endMarker) { map.removeLayer(endMarker); endMarker = null; }
+    state.selectedRunId = null;
+  }
+}
+
+// ── EXPORT ──
+async function exportRunCSV(id) {
+  const runs = await getAllRuns();
+  const run = runs.find(r => r.id === id);
+  if (!run) return;
+  const rows = [['lat','lng','point']];
+  run.coords.forEach((c, i) => rows.push([c[0], c[1], i + 1]));
+  downloadFile(rowsToCSV(rows), `stride_run_${id}.csv`, 'text/csv');
+}
+
+async function exportRunGPX(id) {
+  const runs = await getAllRuns();
+  const run = runs.find(r => r.id === id);
+  if (!run) return;
+  downloadFile(toGPX(run), `stride_run_${id}.gpx`, 'application/gpx+xml');
+}
+
+async function exportAllCSV() {
+  const runs = await getAllRuns();
+  if (!runs.length) { showToast('No runs to export'); return; }
+  const rows = [['id','date','duration_s','distance_km','pace_min_per_km']];
+  runs.forEach(r => rows.push([
+    r.id, r.date, r.duration, r.distance.toFixed(4),
+    r.duration && r.distance > 0 ? (r.duration / r.distance / 60).toFixed(4) : ''
+  ]));
+  downloadFile(rowsToCSV(rows), 'stride_all_runs.csv', 'text/csv');
+  showToast('CSV exported');
+}
+
+async function exportAllGPX() {
+  const runs = await getAllRuns();
+  if (!runs.length) { showToast('No runs to export'); return; }
+  let tracks = runs.map(r => toGPX(r, false)).join('\n');
+  const gpx = `<?xml version="1.0"?><gpx version="1.1" creator="Stride">${tracks}</gpx>`;
+  downloadFile(gpx, 'stride_all_runs.gpx', 'application/gpx+xml');
+  showToast('GPX exported');
+}
+
+function toGPX(run, wrap = true) {
+  const pts = run.coords.map(c =>
+    `<trkpt lat="${c[0]}" lon="${c[1]}"></trkpt>`
+  ).join('');
+  const trk = `<trk><name>Run ${run.id || ''} ${run.date}</name><trkseg>${pts}</trkseg></trk>`;
+  return wrap ? `<?xml version="1.0"?><gpx version="1.1" creator="Stride">${trk}</gpx>` : trk;
+}
+
+function rowsToCSV(rows) {
+  return rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+}
+
+function downloadFile(content, filename, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = filename;
+  a.click();
+}
+
+// ── UTILS ──
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = rad(lat2 - lat1), dLon = rad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function rad(d) { return d * Math.PI / 180; }
+
+function formatDuration(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+function formatPace(secPerKm) {
+  const m = Math.floor(secPerKm / 60), s = Math.round(secPerKm % 60);
+  return `${m}:${pad(s)}`;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function setStatus(type, text) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'dot ' + type;
+  document.getElementById('status-text').textContent = text;
+}
+
+function showBadges(show) {
+  document.getElementById('map-badge-dist').style.display = show ? 'block' : 'none';
+  document.getElementById('map-badge-pace').style.display = show ? 'block' : 'none';
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ──
+openDB().then(() => {
+  getAllRuns().then(runs => {
+    if (runs.length > 0) {
+      document.getElementById('route-info').textContent =
+        `${runs.length} saved run${runs.length > 1 ? 's' : ''} — tap History to view`;
+    }
+  });
+});
+</script>
 </body>
 </html>
