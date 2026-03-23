@@ -409,6 +409,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 /* map-view mode: HUD gets out of the way, only bottom bar stays */
 #run-hud.map-view { background: transparent; pointer-events: none; }
 #run-hud.map-view #hud-inner { display: none; }
+/* Bring map above HUD when in map-view */
+#map-container.map-view-active { z-index: 1799; position: relative; }
 #hud-map-bar {
   display: none;
   position: fixed; bottom: 0; left: 0; right: 0;
@@ -1598,16 +1600,21 @@ function hideHUD() {
 function toggleHudView() {
   hudMapView = !hudMapView;
   var hud = document.getElementById('run-hud');
+  var mapContainer = document.getElementById('map-container');
   var btn = document.getElementById('hud-btn-toggle');
   if (hudMapView) {
     hud.classList.add('map-view');
+    mapContainer.classList.add('map-view-active');
     btn.classList.add('map-mode');
     btn.textContent = 'Map View';
-    // Double invalidate — first pass sizes the container, second renders tiles
-    setTimeout(function() { map.invalidateSize(); }, 100);
-    setTimeout(function() { map.invalidateSize(); }, 450);
+    // Multiple invalidates to force Leaflet to re-render tiles
+    map.invalidateSize(false);
+    setTimeout(function() { map.invalidateSize(false); }, 100);
+    setTimeout(function() { map.invalidateSize(false); }, 400);
+    setTimeout(function() { map.invalidateSize(false); }, 800);
   } else {
     hud.classList.remove('map-view');
+    mapContainer.classList.remove('map-view-active');
     btn.classList.remove('map-mode');
     btn.textContent = 'Map View';
   }
