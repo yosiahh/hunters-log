@@ -303,8 +303,170 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
-/* MOBILE */
-@media(max-width:700px){
+/* FULLSCREEN RUN HUD */
+#run-hud {
+  display: none;
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 1800;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+}
+#run-hud.show { display: flex; }
+
+#hud-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 24px 32px;
+  gap: 0;
+}
+
+/* top bar */
+#hud-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+#hud-status-row { display: flex; align-items: center; gap: 8px; }
+#hud-status-text { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--text-dim); text-transform: uppercase; }
+#hud-level-row { display: flex; align-items: center; gap: 8px; }
+#hud-lv-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 0.1em; text-shadow: 0 0 8px var(--accent-glow); white-space: nowrap; }
+#hud-xp-track { width: 80px; height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+#hud-xp-bar { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 2px; transition: width 0.8s ease; box-shadow: 0 0 5px var(--accent-glow); }
+
+/* big timer */
+#hud-timer-section { text-align: center; flex-shrink: 0; margin-bottom: 4px; }
+#hud-timer { font-family: var(--font-display); font-size: 72px; font-weight: 300; color: var(--text); letter-spacing: -0.04em; line-height: 1; }
+
+.hud-stat-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.hud-stat-unit { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+/* divider */
+#hud-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  margin: 16px 0 1px;
+  flex-shrink: 0;
+}
+.hud-cell { background: var(--bg); padding: 18px 16px; text-align: center; }
+.hud-cell-accent { background: var(--surface); }
+.hud-stat-val { font-family: var(--font-display); font-size: 36px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+.hud-cell-accent .hud-stat-val { color: var(--accent); }
+
+/* xp strip */
+#hud-xp-strip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; background: var(--surface);
+  flex-shrink: 0; margin-bottom: 20px;
+}
+#hud-xp-lv { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.12em; white-space: nowrap; min-width: 36px; }
+#hud-xp-strip-track { flex: 1; height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+#hud-xp-strip-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 2px; box-shadow: 0 0 6px var(--accent-glow); animation: shimmer 2s infinite; }
+#hud-xp-next { font-family: var(--font-mono); font-size: 8px; color: var(--text-muted); letter-spacing: 0.07em; white-space: nowrap; }
+
+/* hud controls */
+#hud-controls {
+  display: flex; gap: 10px;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+#hud-btn-toggle {
+  flex: 1; padding: 18px 8px;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text-dim); cursor: pointer; border-radius: var(--r);
+  transition: all 0.15s;
+}
+#hud-btn-toggle:hover { border-color: var(--text-dim); color: var(--text); }
+#hud-btn-toggle.map-mode { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-dim); }
+#hud-btn-pause {
+  flex: 1.2; padding: 18px 8px;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text-dim); cursor: pointer; border-radius: var(--r);
+  transition: all 0.15s;
+}
+#hud-btn-pause:hover { border-color: var(--gold); color: var(--gold); }
+#hud-btn-stop {
+  flex: 1.2; padding: 18px 8px;
+  font-family: var(--font-ui); font-size: 15px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--accent); border: 1px solid var(--accent);
+  color: #050905; cursor: pointer; border-radius: var(--r);
+  box-shadow: 0 0 14px var(--accent-glow);
+  transition: all 0.15s;
+}
+#hud-btn-stop:hover { background: #b5ff4a; }
+
+/* map-view mode: HUD shrinks to a slim overlay bar at bottom of map */
+#run-hud.map-view #hud-inner { display: none; }
+#hud-map-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(8,12,10,0.95);
+  border-top: 1px solid var(--border);
+  z-index: 1801;
+  padding: 10px 16px 28px;
+  backdrop-filter: blur(8px);
+  flex-direction: column;
+  gap: 8px;
+}
+#run-hud.map-view #hud-map-bar { display: flex; }
+
+#hud-map-stats {
+  display: flex; gap: 0; background: var(--border); border-radius: var(--r); overflow: hidden;
+}
+.hud-map-cell {
+  flex: 1; padding: 8px 6px; text-align: center; background: var(--surface);
+}
+.hud-map-cell + .hud-map-cell { border-left: 1px solid var(--border); }
+.hud-map-cell-label { font-family: var(--font-mono); font-size: 7px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px; }
+.hud-map-cell-val { font-family: var(--font-display); font-size: 16px; font-weight: 300; color: var(--text); letter-spacing: -0.01em; line-height: 1; }
+.hud-map-cell-val.accent { color: var(--accent); }
+
+#hud-map-btns { display: flex; gap: 8px; }
+#hud-map-btn-hud {
+  flex: 1; padding: 12px 8px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--border2); color: var(--text-dim);
+  cursor: pointer; border-radius: var(--r); transition: all 0.15s;
+}
+#hud-map-btn-hud:hover { border-color: var(--accent); color: var(--accent); }
+#hud-map-btn-pause {
+  flex: 1; padding: 12px 8px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--border2); color: var(--text-dim);
+  cursor: pointer; border-radius: var(--r); transition: all 0.15s;
+}
+#hud-map-btn-pause:hover { border-color: var(--gold); color: var(--gold); }
+#hud-map-btn-stop {
+  flex: 1.5; padding: 12px 8px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--accent); border: 1px solid var(--accent); color: #050905;
+  cursor: pointer; border-radius: var(--r); box-shadow: 0 0 10px var(--accent-glow);
+  transition: all 0.15s;
+}
+
+@media(max-width:700px) {
+  #hud-timer { font-size: 56px; }
+  .hud-stat-val { font-size: 30px; }
+  #hud-inner { padding: 44px 18px 24px; }
+  #hud-controls { gap: 8px; }
+  #hud-btn-toggle, #hud-btn-pause, #hud-btn-stop { padding: 16px 6px; font-size: 12px; }
+}
+
+@media(max-width:380px) {
+  #hud-timer { font-size: 46px; }
+  .hud-stat-val { font-size: 26px; }
+}
   html,body{overflow:hidden;height:100%;}
   #app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
   #map-container{flex:1 1 0;min-height:0;order:2;}
@@ -477,6 +639,96 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div id="map-overlay">
       <div class="map-badge" id="map-badge-dist" style="display:none">Distance<span id="mb-dist">0.00 km</span></div>
       <div class="map-badge" id="map-badge-pace" style="display:none">Pace<span id="mb-pace">--:--</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- FULLSCREEN RUN HUD -->
+<div id="run-hud">
+  <div id="hud-inner">
+
+    <!-- Top bar -->
+    <div id="hud-topbar">
+      <div id="hud-status-row">
+        <div class="dot recording" id="hud-dot"></div>
+        <span id="hud-status-text">Recording…</span>
+      </div>
+      <div id="hud-level-row">
+        <span id="hud-lv-label">LV. 1</span>
+        <div id="hud-xp-track"><div id="hud-xp-bar"></div></div>
+      </div>
+    </div>
+
+    <!-- Big timer -->
+    <div id="hud-timer-section">
+      <div class="hud-stat-label">Duration</div>
+      <div id="hud-timer">00:00:00</div>
+    </div>
+
+    <!-- Stats grid -->
+    <div id="hud-grid">
+      <div class="hud-cell">
+        <div class="hud-stat-label">Distance</div>
+        <div class="hud-stat-val" id="hud-dist">0.00</div>
+        <div class="hud-stat-unit">km</div>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-stat-label">Pace</div>
+        <div class="hud-stat-val" id="hud-pace">--:--</div>
+        <div class="hud-stat-unit">min/km</div>
+      </div>
+      <div class="hud-cell">
+        <div class="hud-stat-label">Speed</div>
+        <div class="hud-stat-val" id="hud-speed">0.0</div>
+        <div class="hud-stat-unit">km/h</div>
+      </div>
+      <div class="hud-cell hud-cell-accent">
+        <div class="hud-stat-label">Points</div>
+        <div class="hud-stat-val" id="hud-pts">0</div>
+        <div class="hud-stat-unit">gps pts</div>
+      </div>
+    </div>
+
+    <!-- XP strip -->
+    <div id="hud-xp-strip">
+      <span id="hud-xp-lv">LV. 1</span>
+      <div id="hud-xp-strip-track"><div id="hud-xp-strip-fill"></div></div>
+      <span id="hud-xp-next">0 XP</span>
+    </div>
+
+    <!-- Controls -->
+    <div id="hud-controls">
+      <button id="hud-btn-toggle" onclick="toggleHudView()">◎ Map</button>
+      <button id="hud-btn-pause" onclick="pauseRun()">Pause</button>
+      <button id="hud-btn-stop" onclick="stopRun()">Stop</button>
+    </div>
+
+  </div>
+
+  <!-- Slim bar shown when in map-view mode -->
+  <div id="hud-map-bar">
+    <div id="hud-map-stats">
+      <div class="hud-map-cell">
+        <div class="hud-map-cell-label">Time</div>
+        <div class="hud-map-cell-val" id="hud-map-time">00:00:00</div>
+      </div>
+      <div class="hud-map-cell">
+        <div class="hud-map-cell-label">Distance</div>
+        <div class="hud-map-cell-val" id="hud-map-dist">0.00</div>
+      </div>
+      <div class="hud-map-cell">
+        <div class="hud-map-cell-label">Pace</div>
+        <div class="hud-map-cell-val" id="hud-map-pace">--:--</div>
+      </div>
+      <div class="hud-map-cell">
+        <div class="hud-map-cell-label">Points</div>
+        <div class="hud-map-cell-val accent" id="hud-map-pts">0</div>
+      </div>
+    </div>
+    <div id="hud-map-btns">
+      <button id="hud-map-btn-hud" onclick="toggleHudView()">⬆ HUD</button>
+      <button id="hud-map-btn-pause" onclick="pauseRun()">Pause</button>
+      <button id="hud-map-btn-stop" onclick="stopRun()">Stop</button>
     </div>
   </div>
 </div>
@@ -783,6 +1035,9 @@ function startRun() {
 
   state.timerInterval = setInterval(updateTimer, 1000);
   state.watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, { enableHighAccuracy:true, maximumAge:2000, timeout:10000 });
+  requestWakeLock();
+  startAudioKeepalive();
+  showHUD();
   showBadges(true);
 }
 
@@ -817,6 +1072,7 @@ function onPosition(pos) {
   state.coords.push([lat, lng]);
   routeLine.setLatLngs(state.coords);
   updateStats();
+  updateHUD_display();
   document.getElementById('display-pts').textContent = state.coords.length;
   document.getElementById('route-info').textContent = state.coords.length + ' GPS pts · ±' + Math.round(accuracy) + 'm';
 }
@@ -839,6 +1095,7 @@ function pauseRun() {
     setStatus('paused', 'Paused');
     document.getElementById('xp-earning-indicator').classList.remove('visible');
   }
+  syncHudPauseLabel();
 }
 
 function stopRun(silent) {
@@ -861,6 +1118,9 @@ function stopRun(silent) {
 
   if (posMarker) { map.removeLayer(posMarker); posMarker = null; }
   if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+  releaseWakeLock();
+  stopAudioKeepalive();
+  hideHUD();
 
   if (state.coords.length > 2 && !silent) {
     saveRun(run).then(function() { renderEndMarkers(); triggerPostRun(run); });
@@ -884,6 +1144,7 @@ function updateTimer() {
   state.elapsed = Math.floor((Date.now() - state.startTime - state.totalPausedMs) / 1000);
   document.getElementById('display-time').textContent = formatDuration(state.elapsed);
   updateStats();
+  updateHUD_display();
 }
 
 function updateStats() {
@@ -1307,6 +1568,157 @@ function showToast(msg) {
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+// ════════════════════════════════════════
+// FULLSCREEN HUD
+// ════════════════════════════════════════
+var hudMapView = false;
+
+function showHUD() {
+  hudMapView = false;
+  document.getElementById('run-hud').classList.add('show');
+  document.getElementById('run-hud').classList.remove('map-view');
+  document.getElementById('hud-btn-toggle').classList.remove('map-mode');
+  document.getElementById('hud-btn-toggle').textContent = '◎ Map';
+  syncHudPauseLabel();
+  updateHUD_display();
+  // Invalidate map size in case it was hidden
+  setTimeout(function() { map.invalidateSize(); }, 50);
+}
+
+function hideHUD() {
+  document.getElementById('run-hud').classList.remove('show');
+  document.getElementById('run-hud').classList.remove('map-view');
+  hudMapView = false;
+}
+
+function toggleHudView() {
+  hudMapView = !hudMapView;
+  var hud = document.getElementById('run-hud');
+  var btn = document.getElementById('hud-btn-toggle');
+  if (hudMapView) {
+    hud.classList.add('map-view');
+    btn.classList.add('map-mode');
+    btn.textContent = '⬆ HUD';
+    // Allow map to fill properly
+    setTimeout(function() { map.invalidateSize(); }, 80);
+  } else {
+    hud.classList.remove('map-view');
+    btn.classList.remove('map-mode');
+    btn.textContent = '◎ Map';
+  }
+}
+
+function syncHudPauseLabel() {
+  var lbl = state.paused ? 'Resume' : 'Pause';
+  document.getElementById('hud-btn-pause').textContent = lbl;
+  document.getElementById('hud-map-btn-pause').textContent = lbl;
+  // Dot
+  var dot = document.getElementById('hud-dot');
+  dot.className = 'dot ' + (state.paused ? 'paused' : 'recording');
+  document.getElementById('hud-status-text').textContent = state.paused ? 'Paused' : 'Recording…';
+}
+
+function updateHUD_display() {
+  if (!document.getElementById('run-hud').classList.contains('show')) return;
+  var needed = xpForLevel(player.level);
+  var pct = Math.min(100, (player.xp / needed) * 100);
+
+  // Top bar
+  document.getElementById('hud-lv-label').textContent = 'LV. ' + player.level;
+  document.getElementById('hud-xp-bar').style.width = pct + '%';
+
+  // Timer
+  document.getElementById('hud-timer').textContent = formatDuration(state.elapsed);
+  document.getElementById('hud-map-time').textContent = formatDuration(state.elapsed);
+
+  // Stats
+  var km = state.distance;
+  var paceStr = (km > 0.05 && state.elapsed > 0) ? formatPace(state.elapsed / km) : '--:--';
+  var speedStr = (km > 0.05 && state.elapsed > 0) ? (km / (state.elapsed / 3600)).toFixed(1) : '0.0';
+
+  document.getElementById('hud-dist').textContent = km.toFixed(2);
+  document.getElementById('hud-pace').textContent = paceStr;
+  document.getElementById('hud-speed').textContent = speedStr;
+  document.getElementById('hud-pts').textContent = state.coords.length;
+
+  document.getElementById('hud-map-dist').textContent = km.toFixed(2);
+  document.getElementById('hud-map-pace').textContent = paceStr;
+  document.getElementById('hud-map-pts').textContent = state.coords.length;
+
+  // XP strip
+  document.getElementById('hud-xp-lv').textContent = 'LV. ' + player.level;
+  document.getElementById('hud-xp-strip-fill').style.width = pct + '%';
+  document.getElementById('hud-xp-next').textContent = (needed - player.xp) + ' XP';
+}
+
+// ════════════════════════════════════════
+// iOS BACKGROUND PREVENTION
+// ════════════════════════════════════════
+
+// 1. Wake Lock — keeps screen on (iOS Safari 16.4+, Android Chrome)
+var wakeLock = null;
+function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(function(wl) {
+      wakeLock = wl;
+      wakeLock.addEventListener('release', function() { wakeLock = null; });
+      setStatusSuffix(' · 🔒');
+    }).catch(function() {});
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  setStatusSuffix('');
+}
+
+// Re-acquire wake lock if screen turns off and back on
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && state.running) {
+    // Re-request wake lock (iOS releases it when screen goes off)
+    requestWakeLock();
+    // Re-register GPS watcher in case iOS killed it
+    if (state.watchId !== null) {
+      navigator.geolocation.clearWatch(state.watchId);
+    }
+    state.watchId = navigator.geolocation.watchPosition(onPosition, onGPSError, {
+      enableHighAccuracy: true, maximumAge: 2000, timeout: 10000
+    });
+    setStatus('recording', 'Recording…');
+  }
+});
+
+// 2. Silent audio keepalive — iOS keeps JS alive when audio context is active
+var audioCtx = null;
+var audioInterval = null;
+function startAudioKeepalive() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Play a silent buffer every 25 seconds to prevent iOS from suspending JS
+    audioInterval = setInterval(function() {
+      if (!state.running) return;
+      var buf = audioCtx.createBuffer(1, 1, 22050);
+      var src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    }, 25000);
+  } catch(e) {}
+}
+function stopAudioKeepalive() {
+  clearInterval(audioInterval);
+  audioInterval = null;
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+}
+
+// Helper to append suffix to status text without overwriting type
+var statusSuffix = '';
+function setStatusSuffix(s) { statusSuffix = s; }
+// Override setStatus to include suffix
+function setStatus(type, text) {
+  document.getElementById('status-dot').className = 'dot ' + type;
+  document.getElementById('status-text').textContent = text + statusSuffix;
 }
 
 // ════════════════════════════════════════
