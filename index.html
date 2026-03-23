@@ -384,8 +384,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   color: var(--text-dim); cursor: pointer; border-radius: var(--r);
   transition: all 0.15s;
 }
-#hud-btn-toggle:hover { border-color: var(--text-dim); color: var(--text); }
-#hud-btn-toggle.map-mode { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-dim); }
+#hud-btn-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+#hud-btn-toggle.map-mode { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 #hud-btn-pause {
   flex: 1.2; padding: 18px 8px;
   font-family: var(--font-ui); font-size: 13px; font-weight: 600;
@@ -406,18 +406,20 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 }
 #hud-btn-stop:hover { background: #b5ff4a; }
 
-/* map-view mode: HUD shrinks to a slim overlay bar at bottom of map */
+/* map-view mode: HUD gets out of the way, only bottom bar stays */
+#run-hud.map-view { background: transparent; pointer-events: none; }
 #run-hud.map-view #hud-inner { display: none; }
 #hud-map-bar {
   display: none;
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: rgba(8,12,10,0.95);
+  background: rgba(8,12,10,0.96);
   border-top: 1px solid var(--border);
   z-index: 1801;
   padding: 10px 16px 28px;
   backdrop-filter: blur(8px);
   flex-direction: column;
   gap: 8px;
+  pointer-events: all;
 }
 #run-hud.map-view #hud-map-bar { display: flex; }
 
@@ -436,10 +438,10 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 #hud-map-btn-hud {
   flex: 1; padding: 12px 8px;
   font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
-  background: var(--surface); border: 1px solid var(--border2); color: var(--text-dim);
+  background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent);
   cursor: pointer; border-radius: var(--r); transition: all 0.15s;
 }
-#hud-map-btn-hud:hover { border-color: var(--accent); color: var(--accent); }
+#hud-map-btn-hud:hover { background: var(--accent); color: #050905; }
 #hud-map-btn-pause {
   flex: 1; padding: 12px 8px;
   font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
@@ -698,7 +700,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
     <!-- Controls -->
     <div id="hud-controls">
-      <button id="hud-btn-toggle" onclick="toggleHudView()">◎ Map</button>
+      <button id="hud-btn-toggle" onclick="toggleHudView()">Map View</button>
       <button id="hud-btn-pause" onclick="pauseRun()">Pause</button>
       <button id="hud-btn-stop" onclick="stopRun()">Stop</button>
     </div>
@@ -726,7 +728,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       </div>
     </div>
     <div id="hud-map-btns">
-      <button id="hud-map-btn-hud" onclick="toggleHudView()">⬆ HUD</button>
+      <button id="hud-map-btn-hud" onclick="toggleHudView()">HUD View</button>
       <button id="hud-map-btn-pause" onclick="pauseRun()">Pause</button>
       <button id="hud-map-btn-stop" onclick="stopRun()">Stop</button>
     </div>
@@ -1580,7 +1582,7 @@ function showHUD() {
   document.getElementById('run-hud').classList.add('show');
   document.getElementById('run-hud').classList.remove('map-view');
   document.getElementById('hud-btn-toggle').classList.remove('map-mode');
-  document.getElementById('hud-btn-toggle').textContent = '◎ Map';
+  document.getElementById('hud-btn-toggle').textContent = 'Map View';
   syncHudPauseLabel();
   updateHUD_display();
   // Invalidate map size in case it was hidden
@@ -1600,13 +1602,14 @@ function toggleHudView() {
   if (hudMapView) {
     hud.classList.add('map-view');
     btn.classList.add('map-mode');
-    btn.textContent = '⬆ HUD';
-    // Allow map to fill properly
-    setTimeout(function() { map.invalidateSize(); }, 80);
+    btn.textContent = 'Map View';
+    // Double invalidate — first pass sizes the container, second renders tiles
+    setTimeout(function() { map.invalidateSize(); }, 100);
+    setTimeout(function() { map.invalidateSize(); }, 450);
   } else {
     hud.classList.remove('map-view');
     btn.classList.remove('map-mode');
-    btn.textContent = '◎ Map';
+    btn.textContent = 'Map View';
   }
 }
 
